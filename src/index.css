@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
+  
+  --color-brand-primary: #0A2463;
+  --color-brand-secondary: #D4C3A3;
+  --color-brand-accent: #F5F1E8;
+  --color-brand-muted: #67686B;
+}
+
+@layer base {
+  html.lenis, html.lenis body {
+    height: auto;
+  }
+
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  .lenis.lenis-scrolling iframe {
+    pointer-events: none;
+  }
+
+  html, body {
+    @apply font-sans text-brand-primary bg-white antialiased;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+
+  html::-webkit-scrollbar, body::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  p {
+    @apply text-brand-muted font-light leading-relaxed;
+  }
+  
+  @media (min-width: 768px) {
+    body, a, button, [role="button"], .cursor-pointer {
+      cursor: none !important;
+    }
+  }
+  
+  h1, h2, h3, h4 {
+    @apply font-serif tracking-tight;
+  }
+}
+
+.glass-effect {
+  @apply bg-white/80 backdrop-blur-md border border-white/20;
+}
+
+.transition-card {
+  @apply transition-all duration-300 hover:shadow-xl hover:-translate-y-1;
+}
