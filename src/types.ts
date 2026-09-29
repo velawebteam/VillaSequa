@@ -27,4 +27,4 @@ export interface SearchFilters {
   bedrooms?: number;
 }
 
-export type View = 'home' | 'listing' | 'detail' | 'about' | 'services' | 'favorites' | 'contact';
+export type View = 'home' | 'listing' | 'detail' | 'about' | 'services' | 'favorites' | 'contact' | 'sell';

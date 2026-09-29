@@ -1,4 +1,4 @@
-const FAVORITES_KEY = 'villassequa_favorites';
+const FAVORITES_KEY = 'premium_realestate_favorites';
 
 export const getFavorites = (): string[] => {
   const stored = localStorage.getItem(FAVORITES_KEY);

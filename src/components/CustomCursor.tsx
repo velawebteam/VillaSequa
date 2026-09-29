@@ -5,6 +5,7 @@ const CustomCursor: React.FC = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [isOverDark, setIsOverDark] = useState(false);
 
   const springConfig = { damping: 25, stiffness: 200 };
   const cursorX = useSpring(0, springConfig);
@@ -12,10 +13,18 @@ const CustomCursor: React.FC = () => {
 
   useEffect(() => {
     const moveMouse = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-      cursorX.set(e.clientX);
-      cursorY.set(e.clientY);
+      const { clientX, clientY } = e;
+      setMousePosition({ x: clientX, y: clientY });
+      cursorX.set(clientX);
+      cursorY.set(clientY);
       if (!isVisible) setIsVisible(true);
+
+      // Check if current position is over a dark element
+      const element = document.elementFromPoint(clientX, clientY);
+      if (element) {
+        const darkParent = element.closest('[data-theme="dark"]');
+        setIsOverDark(!!darkParent);
+      }
     };
 
     const handleMouseOver = (e: MouseEvent) => {
@@ -55,7 +64,9 @@ const CustomCursor: React.FC = () => {
     <div className="fixed inset-0 pointer-events-none z-[9999] hidden md:block">
       {/* Follower Ring */}
       <motion.div
-        className="fixed top-0 left-0 w-10 h-10 border border-brand-secondary rounded-full -ml-5 -mt-5"
+        className={`fixed top-0 left-0 w-10 h-10 border rounded-full -ml-5 -mt-5 transition-colors duration-300 ${
+          isOverDark ? 'border-white' : 'border-brand-primary'
+        }`}
         style={{
           x: cursorX,
           y: cursorY,
@@ -66,7 +77,9 @@ const CustomCursor: React.FC = () => {
       />
       {/* Outer Glow */}
       <motion.div
-        className="fixed top-0 left-0 w-24 h-24 bg-brand-secondary/5 rounded-full -ml-12 -mt-12 blur-2xl"
+        className={`fixed top-0 left-0 w-24 h-24 rounded-full -ml-12 -mt-12 blur-2xl transition-colors duration-300 ${
+          isOverDark ? 'bg-white/10' : 'bg-brand-primary/5'
+        }`}
         style={{
           x: cursorX,
           y: cursorY,
@@ -75,7 +88,9 @@ const CustomCursor: React.FC = () => {
       />
       {/* Core Dot */}
       <motion.div
-        className="fixed top-0 left-0 w-1.5 h-1.5 bg-brand-secondary rounded-full -ml-[3px] -mt-[3px]"
+        className={`fixed top-0 left-0 w-1.5 h-1.5 rounded-full -ml-[3px] -mt-[3px] transition-colors duration-300 ${
+          isOverDark ? 'bg-white' : 'bg-brand-secondary'
+        }`}
         style={{
           x: mousePosition.x,
           y: mousePosition.y,

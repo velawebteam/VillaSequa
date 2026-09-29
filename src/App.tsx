@@ -26,7 +26,8 @@ import {
   Facebook,
   Linkedin,
   LayoutGrid,
-  Euro
+  Euro,
+  Building2
 } from 'lucide-react';
 import Lenis from 'lenis';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
@@ -47,6 +48,7 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
   const menuItems = [
     { label: 'Início', value: 'home' as View },
     { label: 'Imóveis', value: 'listing' as View },
+    { label: 'Vender', value: 'sell' as View },
     { label: 'Serviços', value: 'services' as View },
     { label: 'Sobre Nós', value: 'about' as View },
     { label: 'Contacto', value: 'contact' as View },
@@ -59,12 +61,13 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${shouldShowBg ? 'bg-white shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
-          <div className="flex items-center cursor-pointer" onClick={() => onViewChange('home')}>
-            <img 
-              src="/villasequa-logo.png" 
-              alt="Villassequa Logo" 
-              className={`h-10 w-auto object-contain transition-all duration-300 ${shouldShowBg ? '' : 'brightness-0 invert opacity-90'}`}
+          <div className="flex items-center cursor-pointer gap-2" onClick={() => onViewChange('home')}>
+            <Building2 
+              className={`h-8 w-8 transition-all duration-300 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             />
+            <span className={`font-serif font-bold tracking-tighter text-lg transition-all duration-300 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}>
+              IMOBILIÁRIA<span className={shouldShowBg ? "text-brand-secondary italic" : "text-white italic opacity-90"}>PREMIUM</span>
+            </span>
           </div>
 
           {/* Desktop Menu */}
@@ -75,8 +78,8 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
                 onClick={() => onViewChange(item.value)}
                 className={`relative text-[10px] uppercase tracking-[0.2em] font-bold transition-colors group ${
                   currentView === item.value 
-                    ? 'text-brand-secondary' 
-                    : shouldShowBg ? 'text-brand-primary' : 'text-white'
+                    ? shouldShowBg ? 'text-brand-secondary' : 'text-white underline underline-offset-8 decoration-white/50'
+                    : shouldShowBg ? 'text-brand-primary' : 'text-white/80'
                 }`}
               >
                 {item.label}
@@ -93,7 +96,7 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
               onClick={() => onViewChange('favorites')}
               className={`relative p-2 rounded-none transition-colors hover:bg-black/5 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             >
-              <Heart size={18} className={currentView === 'favorites' ? 'fill-brand-secondary text-brand-secondary' : ''} />
+              <Heart size={18} className={currentView === 'favorites' ? (shouldShowBg ? 'fill-brand-secondary text-brand-secondary' : 'fill-white text-white') : ''} />
               <AnimatePresence>
                 {favoritesCount > 0 && (
                   <motion.span 
@@ -123,7 +126,7 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
               onClick={() => onViewChange('favorites')}
               className={`relative p-3 transition-transform active:scale-95 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             >
-              <Heart size={22} className={currentView === 'favorites' ? 'fill-brand-secondary text-brand-secondary' : ''} />
+              <Heart size={22} className={currentView === 'favorites' ? (shouldShowBg ? 'fill-brand-secondary text-brand-secondary' : 'fill-white text-white') : ''} />
               <AnimatePresence>
                 {favoritesCount > 0 && (
                   <motion.span 
@@ -223,30 +226,29 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
 
 const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
   return (
-    <footer className="bg-brand-primary text-white pt-20 pb-10">
+    <footer className="bg-brand-secondary text-white pt-20 pb-10" data-theme="dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           <div>
-            <div className="flex items-center cursor-pointer mb-6" onClick={() => onViewChange('home')}>
-              <img 
-                src="/villasequa-logo.png" 
-                alt="Villassequa Logo" 
-                className="h-12 w-auto object-contain brightness-0 invert"
-              />
+            <div className="flex items-center cursor-pointer mb-6 gap-2" onClick={() => onViewChange('home')}>
+              <Building2 className="h-8 w-8 text-white opacity-90" />
+              <span className="font-serif font-bold tracking-tighter text-xl text-white">
+                IMOBILIÁRIA<span className="text-white/80 italic">PREMIUM</span>
+              </span>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed mb-8">
+            <p className="text-white/70 text-sm leading-relaxed mb-8">
               Líderes no mercado imobiliário do Algarve, proporcionando um serviço premium e personalizado para compradores e vendedores exigentes.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary transition-colors"><Instagram size={18} /></a>
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary transition-colors"><Facebook size={18} /></a>
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary transition-colors"><Linkedin size={18} /></a>
+              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-primary transition-colors"><Instagram size={18} /></a>
+              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-primary transition-colors"><Facebook size={18} /></a>
+              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-primary transition-colors"><Linkedin size={18} /></a>
             </div>
           </div>
 
           <div>
-            <h4 className="font-serif text-lg mb-6">Links Rápidos</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
+            <h4 className="font-serif text-lg mb-6 text-white">Links Rápidos</h4>
+            <ul className="space-y-4 text-sm text-white/70">
               <li><button onClick={() => onViewChange('home')} className="hover:text-white transition-colors">Início</button></li>
               <li><button onClick={() => onViewChange('listing')} className="hover:text-white transition-colors">Imóveis</button></li>
               <li><button onClick={() => onViewChange('services')} className="hover:text-white transition-colors">Serviços</button></li>
@@ -257,8 +259,8 @@ const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
           </div>
 
           <div>
-            <h4 className="font-serif text-lg mb-6">Serviços</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
+            <h4 className="font-serif text-lg mb-6 text-white">Serviços</h4>
+            <ul className="space-y-4 text-sm text-white/70">
               <li>Compra de Imóveis</li>
               <li>Venda e Avaliação</li>
               <li>Arrendamentos</li>
@@ -268,29 +270,29 @@ const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
           </div>
 
           <div>
-            <h4 className="font-serif text-lg mb-6">Contacto</h4>
-            <ul className="space-y-4 text-sm text-gray-400">
+            <h4 className="font-serif text-lg mb-6 text-white">Contacto</h4>
+            <ul className="space-y-4 text-sm text-white/70">
               <li className="flex items-start space-x-3">
-                <MapPin size={18} className="text-brand-secondary mt-1 shrink-0" />
+                <MapPin size={18} className="text-white mt-1 shrink-0" />
                 <span>Av. 5 de Outubro, 123<br />8000-001 Faro, Algarve</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Phone size={18} className="text-brand-secondary shrink-0" />
+                <Phone size={18} className="text-white shrink-0" />
                 <span>+351 289 123 456</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Mail size={18} className="text-brand-secondary shrink-0" />
-                <span>geral@villassequa.pt</span>
+                <Mail size={18} className="text-white shrink-0" />
+                <span>geral@imobiliariapremium.pt</span>
               </li>
             </ul>
           </div>
         </div>
         
         <div className="border-t border-white/10 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-xs text-white/40">
-            &copy; {new Date().getFullYear()} Villassequa Imobiliária. Todos os direitos reservados.
+          <p className="text-xs text-white/60">
+            &copy; {new Date().getFullYear()} Imobiliária Premium. Todos os direitos reservados.
           </p>
-          <div className="flex space-x-8 text-xs text-white/40">
+          <div className="flex space-x-8 text-xs text-white/60">
             <a href="#" className="hover:text-white transition-colors">Política de Privacidade</a>
             <a href="#" className="hover:text-white transition-colors">Termos e Condições</a>
           </div>
@@ -429,14 +431,14 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
   return (
     <div className="overflow-x-hidden">
       {/* Hero Section */}
-      <section className="relative h-[90vh] flex items-center overflow-hidden">
+      <section className="relative h-[90vh] flex items-center overflow-hidden" data-theme="dark">
         <motion.div 
           style={{ y: heroY }}
           className="absolute inset-0 z-0"
         >
           <img 
             src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=2000" 
-            alt="Villassequa Algarve Luxury"
+            alt="Algarve Luxury Real Estate"
             className="w-full h-full object-cover scale-110"
           />
           <div className="absolute inset-0 bg-brand-muted/40 mix-blend-multiply" />
@@ -455,7 +457,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-white leading-[1.1] mb-10 md:mb-12 tracking-tight"
             >
-              Procura casa <span className="text-brand-secondary italic font-normal">no Algarve?</span>
+              Procura casa <span className="text-white italic font-normal opacity-90">no Algarve?</span>
             </motion.h1>
             
             <motion.div 
@@ -465,7 +467,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
               className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center"
             >
               <motion.button 
-                whileHover={{ scale: 1.05, backgroundColor: '#D4C3A3' }}
+                whileHover={{ scale: 1.05, backgroundColor: '#292929' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onViewChange('listing')}
                 className="bg-brand-secondary text-white px-8 md:px-12 py-5 rounded-none text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold shadow-2xl min-w-[200px] sm:min-w-[240px] transition-all"
@@ -527,7 +529,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
             </motion.div>
             <div className="p-4">
               <motion.button 
-                whileHover={{ scale: 1.02, backgroundColor: '#0c2e7a' }}
+                whileHover={{ scale: 1.02, backgroundColor: '#7F1D1D' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => onViewChange('listing')}
                 className="w-full bg-brand-primary text-white h-16 flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] text-xs transition-all shadow-lg"
@@ -639,7 +641,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
       </section>
 
       {/* Emotional Selling Section */}
-      <section className="py-24 bg-brand-primary relative overflow-hidden">
+      <section className="py-24 bg-brand-primary relative overflow-hidden" data-theme="dark">
         <div className="absolute top-0 right-0 w-1/3 h-full bg-brand-secondary/10 -skew-x-12 translate-x-1/2" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
@@ -651,7 +653,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
             >
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Vender o seu imóvel?</span>
               <h2 className="text-4xl md:text-6xl font-serif font-bold text-white mb-8 leading-tight tracking-tight">
-                Receba uma avaliação <span className="text-brand-secondary italic">gratuita</span> do seu imóvel em 24h.
+                Receba uma avaliação <span className="text-white italic opacity-90">gratuita</span> do seu imóvel em 24h.
               </h2>
               <p className="text-white/80 text-lg mb-10 leading-relaxed font-light">
                 Sabemos o valor real do seu património. Utilizamos dados atualizados de mercado e a nossa vasta experiência local para garantir o melhor preço na venda.
@@ -670,15 +672,15 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
                     transition={{ delay: 0.5 + (i * 0.1) }}
                     className="flex items-center gap-4 text-white font-light text-lg"
                   >
-                    <div className="bg-brand-secondary/20 p-1">
-                      <CheckCircle2 className="text-brand-secondary" size={20} />
+                    <div className="bg-white/10 p-1">
+                      <CheckCircle2 className="text-white" size={20} />
                     </div>
                     <span>{item}</span>
                   </motion.li>
                 ))}
               </ul>
               <motion.button 
-                whileHover={{ scale: 1.05, backgroundColor: '#D4C3A3' }}
+                whileHover={{ scale: 1.05, backgroundColor: '#292929' }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onViewChange('contact')}
                 className="bg-brand-secondary text-white px-12 py-5 rounded-none font-bold text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl transition-all"
@@ -734,7 +736,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
           
           <div className="relative p-12 bg-gray-50 rounded-3xl">
             <p className="text-xl md:text-2xl font-serif italic text-brand-primary leading-relaxed mb-8">
-              "Comprar casa no Algarve parecia um desafio complexo até contactarmos a Villassequa. Sentimos que as nossas necessidades foram realmente ouvidas e o acompanhamento jurídico foi impecável."
+              "Comprar casa no Algarve parecia um desafio complexo até contactarmos esta imobiliária. Sentimos que as nossas necessidades foram realmente ouvidas e o acompanhamento jurídico foi impecável."
             </p>
             <div>
               <div className="font-bold text-brand-primary uppercase tracking-widest">John & Sarah Miller</div>
@@ -768,6 +770,146 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
 };
 
 // --- Main App Component ---
+
+const SellView = () => {
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, 500], [0, 150]);
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative h-[70vh] flex items-center overflow-hidden" data-theme="dark">
+        <motion.div 
+          style={{ y: heroY }}
+          className="absolute inset-0 z-0"
+        >
+          <img 
+            src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=2000" 
+            alt="Venda o seu imóvel"
+            className="w-full h-full object-cover scale-110"
+          />
+          <div className="absolute inset-0 bg-brand-primary/60 mix-blend-multiply" />
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/60" />
+        </motion.div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <span className="text-brand-secondary font-bold uppercase tracking-[0.4em] text-[11px] mb-8 block">Excelência Imobiliária no Algarve</span>
+            <h1 className="text-5xl md:text-8xl font-serif font-bold text-white mb-10 tracking-tight leading-[1.1]">Venda o seu Imóvel <br/><span className="text-white italic font-normal opacity-90">com Especialistas</span></h1>
+            <p className="text-white/80 text-lg md:text-xl max-w-3xl mx-auto font-light leading-relaxed">
+              Aliamos tecnologia de ponta, marketing de luxo e uma base de dados exclusiva para garantir que o seu património seja valorizado ao máximo.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Evaluation Form Section */}
+      <section className="py-24 relative z-20 -mt-16">
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="bg-white shadow-2xl p-8 md:p-16 border border-gray-100">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-serif font-bold text-brand-primary mb-4">Solicite uma Avaliação Gratuita</h2>
+              <p className="text-brand-muted">Preencha os dados abaixo e a nossa equipa entrará em contacto consigo em menos de 24 horas.</p>
+            </div>
+
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Nome Completo</label>
+                  <input type="text" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="Seu nome..." />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">E-mail de Contacto</label>
+                  <input type="email" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="exemplo@email.com" />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Telemóvel</label>
+                  <input type="tel" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="+351 9xx xxx xxx" />
+                </div>
+              </div>
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Localização do Imóvel</label>
+                  <input type="text" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="Concelho, Freguesia..." />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Tipo de Imóvel</label>
+                  <select className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all appearance-none cursor-pointer">
+                    <option>Moradia</option>
+                    <option>Apartamento</option>
+                    <option>Terreno</option>
+                    <option>Comercial</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Mensagem Adicional (Opcional)</label>
+                  <textarea className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all resize-none h-14" placeholder="Algum detalhe importante?"></textarea>
+                </div>
+              </div>
+              <div className="md:col-span-2 mt-4">
+                <motion.button 
+                  whileHover={{ scale: 1.02, backgroundColor: '#292929' }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-brand-primary text-white py-6 font-bold uppercase tracking-[0.2em] text-sm shadow-xl"
+                >
+                  Enviar Pedido de Avaliação
+                </motion.button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      {/* Selling Points */}
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Porque vender connosco?</span>
+            <h2 className="text-4xl font-serif font-bold text-brand-primary">O Nosso Compromisso com o Sucesso</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            {[
+              {
+                title: 'Marketing Premium',
+                desc: 'Utilizamos fotografia HDR, vídeos com drones e tours virtuais 3D para destacar o seu imóvel.',
+                icon: <Maximize2 size={32} />
+              },
+              {
+                title: 'Rede Global',
+                desc: 'O seu imóvel será anunciado nos principais portais nacionais e internacionais.',
+                icon: <LayoutGrid size={32} />
+              },
+              {
+                title: 'Aconselhamento Jurídico',
+                desc: 'Tratamos de toda a burocracia e documentação para que não tenha de se preocupar com nada.',
+                icon: <CheckCircle2 size={32} />
+              }
+            ].map((point, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2 }}
+                className="bg-white p-12 border border-gray-100 text-center hover:shadow-xl transition-all"
+              >
+                <div className="text-brand-secondary mb-6 flex justify-center">{point.icon}</div>
+                <h3 className="text-xl font-serif font-bold text-brand-primary mb-4">{point.title}</h3>
+                <p className="text-brand-muted text-sm leading-relaxed">{point.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+};
 
 export default function App() {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -878,6 +1020,10 @@ export default function App() {
           
           {currentView === 'contact' && (
             <ContactView properties={mockProperties} />
+          )}
+
+          {currentView === 'sell' && (
+            <SellView />
           )}
         </motion.main>
       </AnimatePresence>
@@ -1117,7 +1263,7 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
                   <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200" alt="Consultor" className="w-full h-full object-cover" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <div className="font-bold text-brand-primary text-lg">Ricardo Viseu</div>
+                  <div className="font-bold text-brand-primary text-lg">Consultor Imobiliário</div>
                   <div className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-3">Consultor Sénior Algarve</div>
                   <a href="tel:+351912345678" className="bg-white px-6 py-3 border border-gray-100 shadow-sm text-brand-primary text-xs font-bold flex items-center justify-center gap-2 hover:bg-brand-secondary hover:text-white transition-all">
                     <Phone size={14} /> +351 912 345 678
@@ -1230,7 +1376,7 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">Email</div>
-                    <div className="text-brand-muted text-sm">geral@villassequa.pt</div>
+                    <div className="text-brand-muted text-sm">geral@imobiliariapremium.pt</div>
                   </div>
                 </div>
               </div>
@@ -1300,7 +1446,7 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
                 <textarea rows={6} placeholder="Como podemos ajudar?" required className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all resize-none"></textarea>
               </div>
               <motion.button 
-                whileHover={{ scale: 1.02, backgroundColor: '#D4C3A3' }}
+                whileHover={{ scale: 1.02, backgroundColor: '#292929' }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full bg-brand-primary text-white py-5 rounded-none font-bold text-sm uppercase tracking-[0.2em] hover:bg-brand-secondary transition-all shadow-lg"
               >
@@ -1404,7 +1550,7 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Nossa História</span>
               <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-0">Confiança, Proximidade, Resultados.</h1>
               <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                A Villassequa nasceu da paixão pelo mercado imobiliário algarvio e da necessidade de oferecer um serviço verdadeiramente premium, onde o cliente não é apenas mais um número, mas sim o centro de toda a operação.
+                A nossa imobiliária nasceu da paixão pelo mercado imobiliário algarvio e da necessidade de oferecer um serviço verdadeiramente premium, onde o cliente não é apenas mais um número, mas sim o centro de toda a operação.
               </p>
               <p className="text-gray-600 text-lg leading-relaxed mb-10">
                 Com sede no coração do Algarve, a nossa equipa combina décadas de conhecimento local com uma visão moderna e tecnológica do negócio imobiliário internacional.
@@ -1439,7 +1585,7 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
             >
               <img 
                 src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1000" 
-                alt="Sobre Villassequa"
+                alt="Sobre a nossa imobiliária"
                 className="rounded-none shadow-2xl"
               />
               <motion.div 
@@ -1459,9 +1605,9 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
           <h2 className="text-4xl font-serif font-bold text-brand-primary mb-12">A Nossa Equipa</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             {[
-              { name: 'Ana Villassequa', role: 'Fundadora & CEO', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400' },
-              { name: 'Ricardo Viseu', role: 'Consultor Sénior', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400' },
-              { name: 'Sofia Mendes', role: 'Coordenadora de Marketing', img: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=400' }
+              { name: 'Ana Silva', role: 'Fundadora & CEO', img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400' },
+              { name: 'Ricardo Santos', role: 'Consultor Sénior', img: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400' },
+              { name: 'Sofia Ferreira', role: 'Coordenadora de Marketing', img: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=400' }
             ].map((member, i) => (
               <motion.div 
                 key={i} 
@@ -1481,7 +1627,7 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
           </div>
         </div>
 
-        <div className="bg-brand-primary p-12 md:p-24 rounded-none text-center text-white">
+        <div className="bg-brand-primary p-12 md:p-24 rounded-none text-center text-white" data-theme="dark">
           <h2 className="text-3xl md:text-5xl font-serif font-bold mb-8">Quer fazer parte da nossa história?</h2>
           <p className="text-gray-400 text-lg mb-12 max-w-2xl mx-auto">Estamos sempre à procura de talentos apaixonados pelo mercado imobiliário e pelo Algarve.</p>
           <button onClick={() => onViewChange('services')} className="bg-brand-secondary text-white px-12 py-5 rounded-none font-bold text-lg shadow-xl hover:shadow-brand-secondary/20 transition-all">
