@@ -5,10 +5,10 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", ui-serif, Georgia, serif;
   
-  --color-brand-primary: #991B1B;
-  --color-brand-secondary: #292929;
-  --color-brand-accent: #F3F4F6;
-  --color-brand-muted: #4B5563;
+  --color-brand-primary: #1B2A4A;
+  --color-brand-secondary: #C5A880;
+  --color-brand-accent: #FAF6F0;
+  --color-brand-muted: #64748B;
 }
 
 @layer base {

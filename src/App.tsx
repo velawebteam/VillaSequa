@@ -66,7 +66,7 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
               className={`h-8 w-8 transition-all duration-300 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             />
             <span className={`font-serif font-bold tracking-tighter text-lg transition-all duration-300 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}>
-              IMOBILIÁRIA<span className={shouldShowBg ? "text-brand-secondary italic" : "text-white italic opacity-90"}>PREMIUM</span>
+              IMOBILIÁRIA<span className="text-brand-secondary italic">PREMIUM</span>
             </span>
           </div>
 
@@ -226,41 +226,42 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
 
 const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
   return (
-    <footer className="bg-brand-secondary text-white pt-20 pb-10" data-theme="dark">
+    <footer className="bg-brand-primary text-white pt-20 pb-10" data-theme="dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           <div>
             <div className="flex items-center cursor-pointer mb-6 gap-2" onClick={() => onViewChange('home')}>
-              <Building2 className="h-8 w-8 text-white opacity-90" />
+              <Building2 className="h-8 w-8 text-brand-secondary" />
               <span className="font-serif font-bold tracking-tighter text-xl text-white">
-                IMOBILIÁRIA<span className="text-white/80 italic">PREMIUM</span>
+                IMOBILIÁRIA<span className="text-brand-secondary italic">PREMIUM</span>
               </span>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed mb-8">
+            <p className="text-gray-300 text-sm leading-relaxed mb-8">
               Líderes no mercado imobiliário do Algarve, proporcionando um serviço premium e personalizado para compradores e vendedores exigentes.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-primary transition-colors"><Instagram size={18} /></a>
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-primary transition-colors"><Facebook size={18} /></a>
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-primary transition-colors"><Linkedin size={18} /></a>
+              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"><Instagram size={18} /></a>
+              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"><Facebook size={18} /></a>
+              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"><Linkedin size={18} /></a>
             </div>
           </div>
 
           <div>
             <h4 className="font-serif text-lg mb-6 text-white">Links Rápidos</h4>
-            <ul className="space-y-4 text-sm text-white/70">
-              <li><button onClick={() => onViewChange('home')} className="hover:text-white transition-colors">Início</button></li>
-              <li><button onClick={() => onViewChange('listing')} className="hover:text-white transition-colors">Imóveis</button></li>
-              <li><button onClick={() => onViewChange('services')} className="hover:text-white transition-colors">Serviços</button></li>
-              <li><button onClick={() => onViewChange('about')} className="hover:text-white transition-colors">Sobre Nós</button></li>
-              <li><button onClick={() => onViewChange('contact')} className="hover:text-white transition-colors">Contacto</button></li>
-              <li><button onClick={() => onViewChange('favorites')} className="hover:text-white transition-colors">Favoritos</button></li>
+            <ul className="space-y-4 text-sm text-gray-300">
+              <li><button onClick={() => onViewChange('home')} className="hover:text-brand-secondary transition-colors">Início</button></li>
+              <li><button onClick={() => onViewChange('listing')} className="hover:text-brand-secondary transition-colors">Imóveis</button></li>
+              <li><button onClick={() => onViewChange('sell')} className="hover:text-brand-secondary transition-colors">Vender</button></li>
+              <li><button onClick={() => onViewChange('services')} className="hover:text-brand-secondary transition-colors">Serviços</button></li>
+              <li><button onClick={() => onViewChange('about')} className="hover:text-brand-secondary transition-colors">Sobre Nós</button></li>
+              <li><button onClick={() => onViewChange('contact')} className="hover:text-brand-secondary transition-colors">Contacto</button></li>
+              <li><button onClick={() => onViewChange('favorites')} className="hover:text-brand-secondary transition-colors">Favoritos</button></li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-serif text-lg mb-6 text-white">Serviços</h4>
-            <ul className="space-y-4 text-sm text-white/70">
+            <ul className="space-y-4 text-sm text-gray-300">
               <li>Compra de Imóveis</li>
               <li>Venda e Avaliação</li>
               <li>Arrendamentos</li>
@@ -271,17 +272,17 @@ const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
 
           <div>
             <h4 className="font-serif text-lg mb-6 text-white">Contacto</h4>
-            <ul className="space-y-4 text-sm text-white/70">
+            <ul className="space-y-4 text-sm text-gray-300">
               <li className="flex items-start space-x-3">
-                <MapPin size={18} className="text-white mt-1 shrink-0" />
+                <MapPin size={18} className="text-brand-secondary mt-1 shrink-0" />
                 <span>Av. 5 de Outubro, 123<br />8000-001 Faro, Algarve</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Phone size={18} className="text-white shrink-0" />
+                <Phone size={18} className="text-brand-secondary shrink-0" />
                 <span>+351 289 123 456</span>
               </li>
               <li className="flex items-center space-x-3">
-                <Mail size={18} className="text-white shrink-0" />
+                <Mail size={18} className="text-brand-secondary shrink-0" />
                 <span>geral@imobiliariapremium.pt</span>
               </li>
             </ul>
@@ -289,12 +290,12 @@ const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
         </div>
         
         <div className="border-t border-white/10 pt-10 flex flex-col md:flex-row justify-between items-center gap-6">
-          <p className="text-xs text-white/60">
+          <p className="text-xs text-white/50">
             &copy; {new Date().getFullYear()} Imobiliária Premium. Todos os direitos reservados.
           </p>
-          <div className="flex space-x-8 text-xs text-white/60">
-            <a href="#" className="hover:text-white transition-colors">Política de Privacidade</a>
-            <a href="#" className="hover:text-white transition-colors">Termos e Condições</a>
+          <div className="flex space-x-8 text-xs text-white/50">
+            <a href="#" className="hover:text-brand-secondary transition-colors">Política de Privacidade</a>
+            <a href="#" className="hover:text-brand-secondary transition-colors">Termos e Condições</a>
           </div>
         </div>
       </div>
@@ -457,7 +458,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-white leading-[1.1] mb-10 md:mb-12 tracking-tight"
             >
-              Procura casa <span className="text-white italic font-normal opacity-90">no Algarve?</span>
+              Procura casa <span className="text-brand-secondary italic font-normal">no Algarve?</span>
             </motion.h1>
             
             <motion.div 
@@ -467,10 +468,10 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
               className="flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center"
             >
               <motion.button 
-                whileHover={{ scale: 1.05, backgroundColor: '#292929' }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onViewChange('listing')}
-                className="bg-brand-secondary text-white px-8 md:px-12 py-5 rounded-none text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold shadow-2xl min-w-[200px] sm:min-w-[240px] transition-all"
+                className="bg-brand-secondary text-white px-8 md:px-12 py-5 rounded-none text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold shadow-2xl min-w-[200px] sm:min-w-[240px] hover:bg-brand-secondary/90 transition-all"
               >
                 Ver seleção
               </motion.button>
@@ -529,10 +530,10 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
             </motion.div>
             <div className="p-4">
               <motion.button 
-                whileHover={{ scale: 1.02, backgroundColor: '#7F1D1D' }}
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => onViewChange('listing')}
-                className="w-full bg-brand-primary text-white h-16 flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] text-xs transition-all shadow-lg"
+                className="w-full bg-brand-primary text-white h-16 flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] text-xs transition-all shadow-lg hover:bg-brand-primary/90"
               >
                 <Search size={18} /> Pesquisar
               </motion.button>
@@ -653,7 +654,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
             >
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Vender o seu imóvel?</span>
               <h2 className="text-4xl md:text-6xl font-serif font-bold text-white mb-8 leading-tight tracking-tight">
-                Receba uma avaliação <span className="text-white italic opacity-90">gratuita</span> do seu imóvel em 24h.
+                Receba uma avaliação <span className="text-brand-secondary italic">gratuita</span> do seu imóvel em 24h.
               </h2>
               <p className="text-white/80 text-lg mb-10 leading-relaxed font-light">
                 Sabemos o valor real do seu património. Utilizamos dados atualizados de mercado e a nossa vasta experiência local para garantir o melhor preço na venda.
@@ -672,18 +673,18 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
                     transition={{ delay: 0.5 + (i * 0.1) }}
                     className="flex items-center gap-4 text-white font-light text-lg"
                   >
-                    <div className="bg-white/10 p-1">
-                      <CheckCircle2 className="text-white" size={20} />
+                    <div className="bg-brand-secondary/20 p-1">
+                      <CheckCircle2 className="text-brand-secondary" size={20} />
                     </div>
                     <span>{item}</span>
                   </motion.li>
                 ))}
               </ul>
               <motion.button 
-                whileHover={{ scale: 1.05, backgroundColor: '#292929' }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onViewChange('contact')}
-                className="bg-brand-secondary text-white px-12 py-5 rounded-none font-bold text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl transition-all"
+                className="bg-brand-secondary text-white px-12 py-5 rounded-none font-bold text-xs uppercase tracking-[0.3em] flex items-center justify-center gap-3 shadow-2xl hover:bg-brand-secondary/90 transition-all"
               >
                 Solicitar Avaliação <ArrowRight size={18} />
               </motion.button>
@@ -800,7 +801,7 @@ const SellView = () => {
             transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           >
             <span className="text-brand-secondary font-bold uppercase tracking-[0.4em] text-[11px] mb-8 block">Excelência Imobiliária no Algarve</span>
-            <h1 className="text-5xl md:text-8xl font-serif font-bold text-white mb-10 tracking-tight leading-[1.1]">Venda o seu Imóvel <br/><span className="text-white italic font-normal opacity-90">com Especialistas</span></h1>
+            <h1 className="text-5xl md:text-8xl font-serif font-bold text-white mb-10 tracking-tight leading-[1.1]">Venda o seu Imóvel <br/><span className="text-brand-secondary italic font-normal">com Especialistas</span></h1>
             <p className="text-white/80 text-lg md:text-xl max-w-3xl mx-auto font-light leading-relaxed">
               Aliamos tecnologia de ponta, marketing de luxo e uma base de dados exclusiva para garantir que o seu património seja valorizado ao máximo.
             </p>
@@ -853,9 +854,9 @@ const SellView = () => {
               </div>
               <div className="md:col-span-2 mt-4">
                 <motion.button 
-                  whileHover={{ scale: 1.02, backgroundColor: '#292929' }}
+                  whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-brand-primary text-white py-6 font-bold uppercase tracking-[0.2em] text-sm shadow-xl"
+                  className="w-full bg-brand-primary text-white py-6 font-bold uppercase tracking-[0.2em] text-sm shadow-xl hover:bg-brand-secondary transition-all"
                 >
                   Enviar Pedido de Avaliação
                 </motion.button>
@@ -1446,7 +1447,7 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
                 <textarea rows={6} placeholder="Como podemos ajudar?" required className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all resize-none"></textarea>
               </div>
               <motion.button 
-                whileHover={{ scale: 1.02, backgroundColor: '#292929' }}
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full bg-brand-primary text-white py-5 rounded-none font-bold text-sm uppercase tracking-[0.2em] hover:bg-brand-secondary transition-all shadow-lg"
               >
