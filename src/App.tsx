@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Property, View, SearchFilters } from './types';
-import { mockProperties } from './data/mockProperties';
+import { getProperties } from './lib/propertyStore';
+import { AdminView } from './components/AdminView';
 import { getFavorites, toggleFavorite } from './lib/favorites';
 import { 
   Search, 
@@ -418,13 +419,16 @@ const PropertyCard = ({ property, onSelect, onToggleFavorite, isFav, ...props }:
 
 // --- Views ---
 
+import { getProperties } from './lib/propertyStore';
+
 const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites }: { 
   onSelectProperty: (p: Property) => void,
   onViewChange: (v: View) => void,
   onToggleFavorite: (id: string) => void,
   favorites: string[]
 }) => {
-  const featured = mockProperties.filter(p => p.featured).slice(0, 3);
+  const properties = getProperties();
+  const featured = properties.filter(p => p.featured).slice(0, 3);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 500], [0, 200]);
   const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
@@ -952,7 +956,32 @@ export default function App() {
     };
   }, []);
 
+  const [propertiesVersion, setPropertiesVersion] = useState(0);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash === 'admin' || window.location.pathname === '/admin') {
+        setCurrentView('admin');
+      }
+    };
+
+    if (window.location.pathname === '/admin' || window.location.hash === '#admin') {
+      setCurrentView('admin');
+    }
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   const handleViewChange = (v: View) => {
+    if (v === 'admin') {
+      window.location.hash = 'admin';
+    } else {
+      if (window.location.hash === '#admin') {
+        window.location.hash = '';
+      }
+    }
     setCurrentView(v);
     setSelectedProperty(null);
   };
@@ -1026,6 +1055,13 @@ export default function App() {
           {currentView === 'sell' && (
             <SellView />
           )}
+
+          {currentView === 'admin' && (
+            <AdminView 
+              onViewChange={handleViewChange} 
+              onPropertiesChange={() => setPropertiesVersion(v => v + 1)} 
+            />
+          )}
         </motion.main>
       </AnimatePresence>
 
@@ -1044,8 +1080,9 @@ const ListingView = ({ onSelectProperty, onToggleFavorite, favorites, initialFil
 }) => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('Todos');
+  const properties = getProperties();
   
-  const filtered = mockProperties.filter(p => {
+  const filtered = properties.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.location.toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'Todos' || p.type === filterType;
     return matchesSearch && matchesType;
