@@ -38,13 +38,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [location, setLocation] = useState('');
-  const [type, setType] = useState<Property['type']>('Vivenda');
-  const [status, setStatus] = useState<Property['status']>('Novo');
-  const [bedrooms, setBedrooms] = useState('3');
-  const [bathrooms, setBathrooms] = useState('2');
-  const [area, setArea] = useState('200');
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=1000');
-  const [featuresStr, setFeaturesStr] = useState('Piscina, Jardim, Garagem, Vista Mar');
+  const [type, setType] = useState<Property['type'] | ''>('');
+  const [status, setStatus] = useState<Property['status'] | ''>('');
+  const [bedrooms, setBedrooms] = useState('');
+  const [bathrooms, setBathrooms] = useState('');
+  const [area, setArea] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [featuresStr, setFeaturesStr] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -64,13 +64,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!type || !status) {
+      alert('Por favor, selecione o Tipo de Imóvel e o Estado.');
+      return;
+    }
     const newProp = addProperty({
       title,
       description,
       price: parseFloat(price) || 350000,
       location,
-      type,
-      status,
+      type: type as Property['type'],
+      status: status as Property['status'],
       bedrooms: parseInt(bedrooms) || 0,
       bathrooms: parseInt(bathrooms) || 0,
       area: parseFloat(area) || 0,
@@ -88,7 +92,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
     setDescription('');
     setPrice('');
     setLocation('');
-    setFeaturesStr('Piscina, Jardim, Garagem');
+    setType('');
+    setStatus('');
+    setBedrooms('');
+    setBathrooms('');
+    setArea('');
+    setImageUrl('');
+    setFeaturesStr('');
     setIsFeatured(false);
 
     setTimeout(() => setSuccessMsg(''), 4000);
@@ -302,7 +312,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               activeTab === 'sync' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
-            <Upload size={18} /> Atualizar Lista de Imóveis (CRM XML)
+            <Upload size={18} /> Atualizar Imóveis (CRM XML)
           </button>
           <button 
             onClick={() => setActiveTab('export')}
@@ -310,7 +320,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               activeTab === 'export' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
             }`}
           >
-            <Download size={18} /> Transferir Lista de Imóveis (XML)
+            <Download size={18} /> Transferir Imóveis (XML)
           </button>
         </div>
 
@@ -379,27 +389,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               <div>
                 <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Tipo de Imóvel</label>
                 <select 
+                  required
                   value={type}
                   onChange={(e) => setType(e.target.value as Property['type'])}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer"
+                  className={`w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer ${type === '' ? 'text-gray-400' : 'text-gray-900'}`}
                 >
-                  <option value="Vivenda">Vivenda</option>
-                  <option value="Apartamento">Apartamento</option>
-                  <option value="Terreno">Terreno</option>
-                  <option value="Comercial">Comercial</option>
+                  <option value="" className="text-gray-400">Selecionar</option>
+                  <option value="Vivenda" className="text-gray-900">Vivenda</option>
+                  <option value="Apartamento" className="text-gray-900">Apartamento</option>
+                  <option value="Terreno" className="text-gray-900">Terreno</option>
+                  <option value="Comercial" className="text-gray-900">Comercial</option>
                 </select>
               </div>
 
               <div>
                 <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Estado</label>
                 <select 
+                  required
                   value={status}
                   onChange={(e) => setStatus(e.target.value as Property['status'])}
-                  className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer"
+                  className={`w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer ${status === '' ? 'text-gray-400' : 'text-gray-900'}`}
                 >
-                  <option value="Novo">Novo</option>
-                  <option value="Usado">Usado</option>
-                  <option value="Em Construção">Em Construção</option>
+                  <option value="" className="text-gray-400">Selecionar</option>
+                  <option value="Novo" className="text-gray-900">Novo</option>
+                  <option value="Usado" className="text-gray-900">Usado</option>
+                  <option value="Em Construção" className="text-gray-900">Em Construção</option>
                 </select>
               </div>
 
