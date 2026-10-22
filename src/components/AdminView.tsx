@@ -54,7 +54,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'vela' && password === '0821053') {
+    if (username === 'imo' && password === '12345') {
       setIsLoggedIn(true);
       setLoginError(false);
     } else {
