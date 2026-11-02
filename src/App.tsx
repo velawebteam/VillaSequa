@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Property, View, SearchFilters } from './types';
 import { getProperties } from './lib/propertyStore';
 import { AdminView } from './components/AdminView';
@@ -36,9 +37,12 @@ import CustomCursor from './components/CustomCursor';
 
 // --- Shared Components ---
 
-const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (v: View) => void, currentView: View, favoritesCount: number }) => {
+import { Link, useLocation } from 'react-router-dom';
+
+const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -47,100 +51,78 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
   }, []);
 
   const menuItems = [
-    { label: 'Início', value: 'home' as View },
-    { label: 'Imóveis', value: 'listing' as View },
-    { label: 'Vender', value: 'sell' as View },
-    { label: 'Serviços', value: 'services' as View },
-    { label: 'Sobre Nós', value: 'about' as View },
-    { label: 'Contacto', value: 'contact' as View },
+    { label: 'Início', path: '/' },
+    { label: 'Imóveis', path: '/listing' },
+    { label: 'Vender', path: '/sell' },
+    { label: 'Serviços', path: '/services' },
+    { label: 'Sobre Nós', path: '/about' },
+    { label: 'Contacto', path: '/contact' },
   ];
 
   // We should force a background if we are not on the home view (which has a hero image)
-  const shouldShowBg = isScrolled || currentView !== 'home';
+  const shouldShowBg = isScrolled || location.pathname !== '/';
 
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${shouldShowBg ? 'bg-white shadow-sm py-3' : 'bg-transparent py-5'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
-          <div className="flex items-center cursor-pointer gap-2" onClick={() => onViewChange('home')}>
+          <Link to="/" className="flex items-center cursor-pointer gap-2">
             <Building2 
               className={`h-8 w-8 transition-all duration-300 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             />
             <span className={`font-serif font-bold tracking-tighter text-lg transition-all duration-300 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}>
               IMOBILIÁRIA<span className="text-brand-secondary italic">PREMIUM</span>
             </span>
-          </div>
+          </Link>
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
             {menuItems.map((item) => (
-              <button
-                key={item.value}
-                onClick={() => onViewChange(item.value)}
+              <Link
+                key={item.path}
+                to={item.path}
                 className={`relative text-[10px] uppercase tracking-[0.2em] font-bold transition-colors group ${
-                  currentView === item.value 
+                  location.pathname === item.path 
                     ? shouldShowBg ? 'text-brand-secondary' : 'text-white underline underline-offset-8 decoration-white/50'
                     : shouldShowBg ? 'text-brand-primary' : 'text-white/80'
                 }`}
               >
                 {item.label}
-                <motion.span 
-                  className="absolute -bottom-1 left-0 right-0 h-[1px] bg-brand-secondary origin-left"
-                  initial={{ scaleX: 0 }}
-                  whileHover={{ scaleX: 1 }}
-                  animate={{ scaleX: currentView === item.value ? 1 : 0 }}
-                  transition={{ duration: 0.3 }}
-                />
-              </button>
+              </Link>
             ))}
-            <button 
-              onClick={() => onViewChange('favorites')}
+            <Link 
+              to="/favorites"
               className={`relative p-2 rounded-none transition-colors hover:bg-black/5 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             >
-              <Heart size={18} className={currentView === 'favorites' ? (shouldShowBg ? 'fill-brand-secondary text-brand-secondary' : 'fill-white text-white') : ''} />
-              <AnimatePresence>
-                {favoritesCount > 0 && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute -top-1 -right-1 bg-brand-secondary text-white text-[10px] w-4 h-4 flex items-center justify-center font-bold"
-                  >
+              <Heart size={18} className={location.pathname === '/favorites' ? (shouldShowBg ? 'fill-brand-secondary text-brand-secondary' : 'fill-white text-white') : ''} />
+              {favoritesCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-brand-secondary text-white text-[10px] w-4 h-4 flex items-center justify-center font-bold">
                     {favoritesCount}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
-            <motion.button 
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => onViewChange('listing')}
+                </span>
+              )}
+            </Link>
+            <Link 
+              to="/listing"
               className="bg-brand-secondary text-white px-6 py-2.5 rounded-none text-[10px] uppercase tracking-widest font-bold hover:bg-brand-secondary/90 transition-all shadow-md"
             >
               Ver Imóveis
-            </motion.button>
+            </Link>
           </div>
+          {/* ... mobile menu ... */}
 
           {/* Mobile Right Icons */}
           <div className="md:hidden flex items-center space-x-2">
-             <button 
-              onClick={() => onViewChange('favorites')}
+             <Link 
+              to="/favorites"
               className={`relative p-3 transition-transform active:scale-95 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
             >
-              <Heart size={22} className={currentView === 'favorites' ? (shouldShowBg ? 'fill-brand-secondary text-brand-secondary' : 'fill-white text-white') : ''} />
-              <AnimatePresence>
-                {favoritesCount > 0 && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute top-2 right-2 bg-brand-secondary text-white text-[9px] w-4 h-4 flex items-center justify-center font-bold rounded-full border border-white"
-                  >
-                    {favoritesCount}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
+              <Heart size={22} className={location.pathname === '/favorites' ? (shouldShowBg ? 'fill-brand-secondary text-brand-secondary' : 'fill-white text-white') : ''} />
+              {favoritesCount > 0 && (
+                <span className="absolute top-2 right-2 bg-brand-secondary text-white text-[9px] w-4 h-4 flex items-center justify-center font-bold rounded-full border border-white">
+                  {favoritesCount}
+                </span>
+              )}
+            </Link>
             <button 
               onClick={() => setIsOpen(!isOpen)}
               className={`p-3 transition-transform active:scale-90 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
@@ -150,8 +132,7 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
           </div>
         </div>
       </div>
-
-
+      
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isOpen && (
@@ -170,53 +151,16 @@ const Navbar = ({ onViewChange, currentView, favoritesCount }: { onViewChange: (
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white z-50 flex flex-col pt-24 px-8 pb-12 md:hidden shadow-2xl"
             >
-              <div className="flex flex-col gap-6">
-                {menuItems.map((item, i) => (
-                  <motion.button
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + (i * 0.1) }}
-                    key={item.value}
-                    onClick={() => {
-                      onViewChange(item.value);
-                      setIsOpen(false);
-                    }}
-                    className={`text-3xl font-serif text-left border-b border-gray-50 pb-4 flex justify-between items-center group ${
-                      currentView === item.value ? 'text-brand-secondary' : 'text-brand-primary'
-                    }`}
-                  >
-                    {item.label}
-                    <ArrowRight size={20} className={`transition-transform ${currentView === item.value ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0 group-hover:translate-x-0 group-hover:opacity-100'}`} />
-                  </motion.button>
-                ))}
-              </div>
-              
-              <div className="mt-auto space-y-8">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
+              {menuItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setIsOpen(false)}
+                  className="text-lg font-serif font-bold text-brand-primary py-4 border-b border-gray-100"
                 >
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-4">Redes Sociais</p>
-                  <div className="flex gap-4">
-                     <a href="#" className="w-10 h-10 border border-gray-100 flex items-center justify-center rounded-none text-brand-primary hover:bg-brand-secondary hover:text-white transition-all"><Instagram size={18} /></a>
-                     <a href="#" className="w-10 h-10 border border-gray-100 flex items-center justify-center rounded-none text-brand-primary hover:bg-brand-secondary hover:text-white transition-all"><Facebook size={18} /></a>
-                  </div>
-                </motion.div>
-
-                <motion.button 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.7 }}
-                  onClick={() => {
-                    onViewChange('listing');
-                    setIsOpen(false);
-                  }}
-                  className="bg-brand-secondary text-white w-full py-5 rounded-none text-xs uppercase tracking-[0.2em] font-bold shadow-xl active:scale-95 transition-all"
-                >
-                  Explorar Imóveis
-                </motion.button>
-              </div>
+                  {item.label}
+                </Link>
+              ))}
             </motion.div>
           </>
         )}
@@ -987,86 +931,28 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white selection:bg-brand-secondary/30 md:cursor-none">
-      <CustomCursor />
-      <Navbar 
-        onViewChange={handleViewChange} 
-        currentView={currentView} 
-        favoritesCount={favorites.length}
-      />
-      
-      <AnimatePresence mode="wait">
-        <motion.main 
-          key={currentView}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="min-h-screen"
-        >
-          {currentView === 'home' && (
-            <HomeView 
-              onSelectProperty={handleSelectProperty} 
-              onViewChange={handleViewChange}
-              onToggleFavorite={handleToggleFavorite}
-              favorites={favorites}
-            />
-          )}
-
-          {currentView === 'listing' && (
-            <ListingView 
-              onSelectProperty={handleSelectProperty}
-              onToggleFavorite={handleToggleFavorite}
-              favorites={favorites}
-              initialFilters={searchFilters}
-            />
-          )}
-
-          {currentView === 'detail' && selectedProperty && (
-            <DetailView 
-              property={selectedProperty}
-              onToggleFavorite={handleToggleFavorite}
-              isFav={favorites.includes(selectedProperty.id)}
-              onViewChange={handleViewChange}
-            />
-          )}
-
-          {currentView === 'favorites' && (
-            <FavoritesView 
-              onSelectProperty={handleSelectProperty}
-              onToggleFavorite={handleToggleFavorite}
-              favorites={favorites}
-              onViewChange={handleViewChange}
-            />
-          )}
-
-          {currentView === 'services' && (
-            <ServicesView onViewChange={handleViewChange} />
-          )}
-
-          {currentView === 'about' && (
-            <AboutView onViewChange={handleViewChange} />
-          )}
-          
-          {currentView === 'contact' && (
-            <ContactView properties={mockProperties} />
-          )}
-
-          {currentView === 'sell' && (
-            <SellView />
-          )}
-
-          {currentView === 'admin' && (
-            <AdminView 
-              onViewChange={handleViewChange} 
-              onPropertiesChange={() => setPropertiesVersion(v => v + 1)} 
-            />
-          )}
-        </motion.main>
-      </AnimatePresence>
-
-      <Footer onViewChange={handleViewChange} />
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen bg-white selection:bg-brand-secondary/30 md:cursor-none">
+        <CustomCursor />
+        {/* Navbar needs to be updated to use Link instead of onViewChange */}
+        <Navbar 
+          favoritesCount={favorites.length}
+        />
+        
+        <Routes>
+          <Route path="/" element={<HomeView onSelectProperty={handleSelectProperty} onViewChange={handleViewChange} onToggleFavorite={handleToggleFavorite} favorites={favorites} />} />
+          <Route path="/listing" element={<ListingView onSelectProperty={handleSelectProperty} onToggleFavorite={handleToggleFavorite} favorites={favorites} initialFilters={searchFilters} />} />
+          <Route path="/admin" element={<AdminView onViewChange={handleViewChange} onPropertiesChange={() => setPropertiesVersion(v => v + 1)} />} />
+          <Route path="/sell" element={<SellView />} />
+          <Route path="/services" element={<ServicesView onViewChange={handleViewChange} />} />
+          <Route path="/about" element={<AboutView onViewChange={handleViewChange} />} />
+          <Route path="/contact" element={<ContactView properties={getProperties()} />} />
+          <Route path="/favorites" element={<FavoritesView onSelectProperty={handleSelectProperty} onToggleFavorite={handleToggleFavorite} favorites={favorites} onViewChange={handleViewChange} />} />
+        </Routes>
+        
+        <Footer onViewChange={handleViewChange} />
+      </div>
+    </BrowserRouter>
   );
 }
 
