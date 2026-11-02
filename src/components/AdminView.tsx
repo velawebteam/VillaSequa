@@ -30,8 +30,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'add' | 'list' | 'sync'>('add');
+  const [activeTab, setActiveTab] = useState<'add' | 'list' | 'sync' | 'export' | 'edit'>('add');
   const [properties, setProperties] = useState<Property[]>(getProperties());
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
   // Add Form State
   const [title, setTitle] = useState('');
@@ -40,6 +41,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [location, setLocation] = useState('');
   const [type, setType] = useState<Property['type'] | ''>('');
   const [status, setStatus] = useState<Property['status'] | ''>('');
+  const [commercialStatus, setCommercialStatus] = useState<Property['commercialStatus'] | ''>('');
+  const [publicationStatus, setPublicationStatus] = useState<Property['publicationStatus'] | ''>('');
   const [bedrooms, setBedrooms] = useState('');
   const [bathrooms, setBathrooms] = useState('');
   const [area, setArea] = useState('');
@@ -49,8 +52,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [successMsg, setSuccessMsg] = useState('');
 
   // XML Sync state
-  const [xmlInput, setXmlInput] = useState('');
   const [syncSuccess, setSyncSuccess] = useState('');
+
+  // Filters state
+  const [searchTitle, setSearchTitle] = useState('');
+  const [searchRef, setSearchRef] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterFeatures, setFilterFeatures] = useState('');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +75,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!type || !status) {
-      alert('Por favor, selecione o Tipo de Imóvel e o Estado.');
+    if (!type || !status || !commercialStatus || !publicationStatus) {
+      alert('Por favor, preencha Tipo, Estado, Estado Comercial e Estado de Publicação.');
       return;
     }
     const newProp = addProperty({
@@ -75,6 +86,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
       location,
       type: type as Property['type'],
       status: status as Property['status'],
+      commercialStatus: commercialStatus as Property['commercialStatus'],
+      publicationStatus: publicationStatus as Property['publicationStatus'],
       bedrooms: parseInt(bedrooms) || 0,
       bathrooms: parseInt(bathrooms) || 0,
       area: parseFloat(area) || 0,
@@ -94,6 +107,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
     setLocation('');
     setType('');
     setStatus('');
+    setCommercialStatus('');
+    setPublicationStatus('');
     setBedrooms('');
     setBathrooms('');
     setArea('');
@@ -403,17 +418,34 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               </div>
 
               <div>
-                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Estado</label>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Estado Comercial</label>
                 <select 
                   required
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as Property['status'])}
-                  className={`w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer ${status === '' ? 'text-gray-400' : 'text-gray-900'}`}
+                  value={commercialStatus}
+                  onChange={(e) => setCommercialStatus(e.target.value as Property['commercialStatus'])}
+                  className={`w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer ${commercialStatus === '' ? 'text-gray-400' : 'text-gray-900'}`}
                 >
                   <option value="" className="text-gray-400">Selecionar</option>
-                  <option value="Novo" className="text-gray-900">Novo</option>
-                  <option value="Usado" className="text-gray-900">Usado</option>
-                  <option value="Em Construção" className="text-gray-900">Em Construção</option>
+                  <option value="disponível" className="text-gray-900">Disponível</option>
+                  <option value="reservado" className="text-gray-900">Reservado</option>
+                  <option value="vendido" className="text-gray-900">Vendido</option>
+                  <option value="arrendado" className="text-gray-900">Arrendado</option>
+                  <option value="indisponível" className="text-gray-900">Indisponível</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Estado de Publicação</label>
+                <select 
+                  required
+                  value={publicationStatus}
+                  onChange={(e) => setPublicationStatus(e.target.value as Property['publicationStatus'])}
+                  className={`w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer ${publicationStatus === '' ? 'text-gray-400' : 'text-gray-900'}`}
+                >
+                  <option value="" className="text-gray-400">Selecionar</option>
+                  <option value="publicado" className="text-gray-900">Publicado</option>
+                  <option value="rascunho" className="text-gray-900">Rascunho</option>
+                  <option value="nao_publicado" className="text-gray-900">Não Publicado</option>
                 </select>
               </div>
 
@@ -503,21 +535,56 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               </div>
               <div className="flex items-center gap-4">
                 <div className="bg-brand-accent/40 px-4 py-2 font-bold text-brand-primary text-sm">
-                  Total: {properties.length} imóveis
+                  Total: {properties.filter(p => 
+                    (p.title.toLowerCase().includes(searchTitle.toLowerCase())) &&
+                    (searchRef === '' || p.id.toLowerCase().includes(searchRef.toLowerCase())) &&
+                    (p.location.toLowerCase().includes(searchLocation.toLowerCase())) &&
+                    (filterType === '' || p.type === filterType) &&
+                    (filterFeatures === '' || p.features.some(f => f.toLowerCase().includes(filterFeatures.toLowerCase()))) &&
+                    (minPrice === '' || p.price >= Number(minPrice)) &&
+                    (maxPrice === '' || p.price <= Number(maxPrice))
+                  ).length} resultados
                 </div>
                 {properties.length > 0 && (
                   <button 
                     onClick={handleDeleteAll}
                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-xs uppercase tracking-wider font-bold transition-all shadow-md flex items-center gap-2"
                   >
-                    <Trash2 size={14} /> Eliminar Lista de Imóveis
+                    <Trash2 size={14} /> Eliminar Lista
                   </button>
                 )}
               </div>
             </div>
 
+            {/* Filters Bar */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8 bg-gray-50 p-6 border border-gray-100">
+              <input type="text" placeholder="Nome/Palavras-chave" value={searchTitle} onChange={(e) => setSearchTitle(e.target.value)} className="p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary" />
+              <input type="text" placeholder="Referência" value={searchRef} onChange={(e) => setSearchRef(e.target.value)} className="p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary" />
+              <input type="text" placeholder="Localização" value={searchLocation} onChange={(e) => setSearchLocation(e.target.value)} className="p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary" />
+              <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary">
+                <option value="">Todos os Tipos</option>
+                <option value="Vivenda">Vivenda</option>
+                <option value="Apartamento">Apartamento</option>
+                <option value="Terreno">Terreno</option>
+                <option value="Comercial">Comercial</option>
+              </select>
+              <input type="text" placeholder="Características" value={filterFeatures} onChange={(e) => setFilterFeatures(e.target.value)} className="p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary" />
+              <div className="flex gap-2">
+                <input type="number" placeholder="Preço Mín." value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="w-1/2 p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary" />
+                <input type="number" placeholder="Preço Máx." value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="w-1/2 p-3 border border-gray-200 text-sm outline-none focus:border-brand-primary" />
+              </div>
+            </div>
+
             <div className="space-y-4">
-              {properties.map((property) => (
+              {properties.filter(p => 
+                (p.title.toLowerCase().includes(searchTitle.toLowerCase())) &&
+                (searchRef === '' || p.id.toLowerCase().includes(searchRef.toLowerCase())) &&
+                (p.location.toLowerCase().includes(searchLocation.toLowerCase())) &&
+                (filterType === '' || p.type === filterType) &&
+                (filterFeatures === '' || p.features.some(f => f.toLowerCase().includes(filterFeatures.toLowerCase()))) &&
+                (minPrice === '' || p.price >= Number(minPrice)) &&
+                (maxPrice === '' || p.price <= Number(maxPrice))
+              ).map((property) => (
                 <div key={property.id} className="flex flex-col md:flex-row items-center justify-between p-6 bg-gray-50 border border-gray-200 gap-6">
                   <div className="flex items-center gap-4 w-full md:w-auto">
                     <img 
@@ -543,6 +610,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
 
                   <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                     <button 
+                      onClick={() => { setEditingProperty(property); setActiveTab('edit'); }}
+                      className="px-4 py-2.5 bg-brand-accent text-brand-primary hover:bg-gray-200 font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all"
+                    >
+                      Editar
+                    </button>
+                    <button 
                       onClick={() => handleToggleFeatured(property.id)}
                       className={`px-4 py-2.5 text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all ${
                         property.featured 
@@ -563,6 +636,102 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                   </div>
                 </div>
               ))}
+            </div>
+
+          </motion.div>
+        )}
+
+        {/* TAB 4: EDIT PROPERTY */}
+        {activeTab === 'edit' && editingProperty && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-xl p-8 md:p-12">
+            <h2 className="text-2xl font-serif font-bold text-brand-primary mb-6">Editar Imóvel: {editingProperty.title}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Título</label>
+                <input type="text" value={editingProperty.title} onChange={e => setEditingProperty({...editingProperty, title: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
+                
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Descrição</label>
+                <textarea rows={4} value={editingProperty.description} onChange={e => setEditingProperty({...editingProperty, description: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
+
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Preço (€)</label>
+                <input type="number" value={editingProperty.price} onChange={e => setEditingProperty({...editingProperty, price: Number(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
+
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Localização</label>
+                <input type="text" value={editingProperty.location} onChange={e => setEditingProperty({...editingProperty, location: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Tipo</label>
+                        <select value={editingProperty.type} onChange={e => setEditingProperty({...editingProperty, type: e.target.value as Property['type']})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm">
+                            <option value="Vivenda">Vivenda</option><option value="Apartamento">Apartamento</option><option value="Terreno">Terreno</option><option value="Comercial">Comercial</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Estado</label>
+                        <select value={editingProperty.status} onChange={e => setEditingProperty({...editingProperty, status: e.target.value as Property['status']})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm">
+                            <option value="Novo">Novo</option><option value="Usado">Usado</option><option value="Em Construção">Em Construção</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-2">
+                    <div><label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Quartos</label><input type="number" value={editingProperty.bedrooms} onChange={e => setEditingProperty({...editingProperty, bedrooms: Number(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" /></div>
+                    <div><label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">WCs</label><input type="number" value={editingProperty.bathrooms} onChange={e => setEditingProperty({...editingProperty, bathrooms: Number(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" /></div>
+                    <div><label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Área (m²)</label><input type="number" value={editingProperty.area} onChange={e => setEditingProperty({...editingProperty, area: Number(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" /></div>
+                </div>
+
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Características (vírgulas)</label>
+                <input type="text" value={editingProperty.features.join(', ')} onChange={e => setEditingProperty({...editingProperty, features: e.target.value.split(',').map(s => s.trim())})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
+              </div>
+
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Galeria de Imagens (Reordene para alterar a capa)</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {editingProperty.images.map((img, idx) => (
+                        <div key={idx} className="relative group border border-gray-200 p-2">
+                            <img src={img} alt="Imóvel" className="w-full h-24 object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1">
+                                <button onClick={(e) => { e.preventDefault();
+                                    const newImages = [...editingProperty.images];
+                                    if(idx > 0) {
+                                        [newImages[idx], newImages[idx-1]] = [newImages[idx-1], newImages[idx]];
+                                        setEditingProperty({...editingProperty, images: newImages});
+                                    }
+                                }} className="bg-white p-1 text-xs">◀</button>
+                                <button onClick={(e) => { e.preventDefault();
+                                    const newImages = [...editingProperty.images];
+                                    if(idx < newImages.length -1) {
+                                        [newImages[idx], newImages[idx+1]] = [newImages[idx+1], newImages[idx]];
+                                        setEditingProperty({...editingProperty, images: newImages});
+                                    }
+                                }} className="bg-white p-1 text-xs">▶</button>
+                                <button onClick={(e) => { e.preventDefault();
+                                    const newImages = editingProperty.images.filter((_, i) => i !== idx);
+                                    setEditingProperty({...editingProperty, images: newImages});
+                                }} className="bg-red-500 text-white p-1 text-xs">X</button>
+                            </div>
+                        </div>
+                    ))}
+                    <button onClick={(e) => { e.preventDefault();
+                        const url = prompt("URL da nova imagem:");
+                        if(url) setEditingProperty({...editingProperty, images: [...editingProperty.images, url]});
+                    }} className="border-2 border-dashed border-gray-300 h-24 flex items-center justify-center text-gray-400">+</button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-8">
+              <button onClick={() => { 
+                const props = getProperties().map(p => p.id === editingProperty.id ? editingProperty : p);
+                saveProperties(props);
+                setProperties(props);
+                setActiveTab('list');
+                setEditingProperty(null);
+                onPropertiesChange();
+              }} className="bg-brand-primary text-white px-8 py-3 font-bold text-xs uppercase tracking-widest">Guardar Alterações</button>
+              <button onClick={() => setActiveTab('list')} className="bg-gray-200 text-gray-800 px-8 py-3 font-bold text-xs uppercase tracking-widest">Cancelar</button>
             </div>
           </motion.div>
         )}

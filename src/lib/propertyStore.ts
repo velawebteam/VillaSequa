@@ -2,12 +2,41 @@ import { Property } from '../types';
 import { mockProperties } from '../data/mockProperties';
 
 const STORAGE_KEY = 'imobiliaria_properties_v2';
+const HISTORY_KEY = 'imobiliaria_import_history_v1';
 
+export interface ImportHistory {
+  date: string;
+  count: number;
+  status: 'success' | 'error';
+  message: string;
+}
+
+export const getImportHistory = (): ImportHistory[] => {
+  try {
+    const saved = localStorage.getItem(HISTORY_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const saveImportHistory = (history: ImportHistory): void => {
+  const current = getImportHistory();
+  localStorage.setItem(HISTORY_KEY, JSON.stringify([history, ...current].slice(0, 50)));
+};
 export const getProperties = (): Property[] => {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // Migration: ensure new fields exist
+      return parsed.map((p: any) => ({
+        ...p,
+        commercialStatus: p.commercialStatus || 'disponível',
+        publicationStatus: p.publicationStatus || 'publicado',
+        createdAt: p.createdAt || new Date().toISOString(),
+        updatedAt: p.updatedAt || new Date().toISOString()
+      }));
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(mockProperties));
       return mockProperties;
@@ -26,15 +55,31 @@ export const saveProperties = (properties: Property[]): void => {
   }
 };
 
-export const addProperty = (property: Omit<Property, 'id'>): Property => {
+export const addProperty = (property: Partial<Property>): Property => {
   const properties = getProperties();
+  const now = new Date().toISOString();
   const newProperty: Property = {
-    ...property,
     id: Date.now().toString(),
+    title: property.title || 'Novo Imóvel',
+    description: property.description || '',
+    price: property.price || 0,
+    location: property.location || '',
+    type: property.type || 'Vivenda',
+    status: property.status || 'Novo',
+    commercialStatus: property.commercialStatus || 'disponível',
+    publicationStatus: property.publicationStatus || 'publicado',
+    bedrooms: property.bedrooms || 0,
+    bathrooms: property.bathrooms || 0,
+    area: property.area || 0,
+    images: property.images || [],
+    features: property.features || [],
+    featured: property.featured || false,
+    createdAt: now,
+    updatedAt: now,
   };
   const updated = [newProperty, ...properties];
   saveProperties(updated);
-  return updated;
+  return newProperty;
 };
 
 export const deleteProperty = (id: string): Property[] => {
@@ -166,5 +211,11 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
   });
 
   saveProperties(parsedProperties);
+  saveImportHistory({
+    date: new Date().toISOString(),
+    count: parsedProperties.length,
+    status: 'success',
+    message: 'Importação bem sucedida via XML'
+  });
   return parsedProperties;
 };

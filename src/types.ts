@@ -11,12 +11,16 @@ export interface Property {
   location: string;
   type: 'Apartamento' | 'Vivenda' | 'Terreno' | 'Comercial';
   status: 'Novo' | 'Usado' | 'Em Construção';
+  commercialStatus: 'disponível' | 'reservado' | 'vendido' | 'arrendado' | 'indisponível';
+  publicationStatus: 'publicado' | 'rascunho' | 'nao_publicado';
   bedrooms: number;
   bathrooms: number;
   area: number;
   images: string[];
   features: string[];
   featured?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SearchFilters {
