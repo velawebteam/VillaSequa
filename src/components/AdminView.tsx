@@ -52,6 +52,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [successMsg, setSuccessMsg] = useState('');
 
   // XML Sync state
+  const [xmlInput, setXmlInput] = useState('');
   const [syncSuccess, setSyncSuccess] = useState('');
 
   // Filters state
