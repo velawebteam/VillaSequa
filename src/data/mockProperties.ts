@@ -1,5 +1,7 @@
 import { Property } from '../types';
 
+const now = new Date().toISOString();
+
 export const mockProperties: Property[] = [
   {
     id: '1',
@@ -9,6 +11,8 @@ export const mockProperties: Property[] = [
     location: 'Quinta do Lago, Algarve',
     type: 'Vivenda',
     status: 'Novo',
+    commercialStatus: 'disponível',
+    publicationStatus: 'publicado',
     bedrooms: 5,
     bathrooms: 6,
     area: 550,
@@ -17,7 +21,10 @@ export const mockProperties: Property[] = [
       'https://images.unsplash.com/photo-1613977255092-2d611b416d9b?auto=format&fit=crop&q=80&w=1000'
     ],
     features: ['Piscina', 'Jardim', 'Garagem', 'Vista Golfe', 'Domótica'],
-    featured: true
+    featured: true,
+    visibility: 'visível',
+    createdAt: now,
+    updatedAt: now
   },
   {
     id: '2',
@@ -27,6 +34,8 @@ export const mockProperties: Property[] = [
     location: 'Vilamoura, Algarve',
     type: 'Apartamento',
     status: 'Novo',
+    commercialStatus: 'disponível',
+    publicationStatus: 'publicado',
     bedrooms: 2,
     bathrooms: 2,
     area: 95,
@@ -34,7 +43,10 @@ export const mockProperties: Property[] = [
       'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1000'
     ],
     features: ['Piscina Comum', 'Terraço', 'Cozinha Equipada', 'Estacionamento'],
-    featured: true
+    featured: true,
+    visibility: 'visível',
+    createdAt: now,
+    updatedAt: now
   },
   {
     id: '3',
@@ -44,6 +56,8 @@ export const mockProperties: Property[] = [
     location: 'Portimão, Algarve',
     type: 'Apartamento',
     status: 'Usado',
+    commercialStatus: 'disponível',
+    publicationStatus: 'publicado',
     bedrooms: 3,
     bathrooms: 3,
     area: 180,
@@ -51,7 +65,10 @@ export const mockProperties: Property[] = [
       'https://images.unsplash.com/photo-1567496898669-ee935f5f647a?auto=format&fit=crop&q=80&w=1000'
     ],
     features: ['Jacuzzi', 'Ar Condicionado', 'Lareira', 'Arrecadação'],
-    featured: true
+    featured: true,
+    visibility: 'visível',
+    createdAt: now,
+    updatedAt: now
   },
   {
     id: '4',
@@ -61,6 +78,8 @@ export const mockProperties: Property[] = [
     location: 'Sagres, Algarve',
     type: 'Terreno',
     status: 'Novo',
+    commercialStatus: 'disponível',
+    publicationStatus: 'publicado',
     bedrooms: 0,
     bathrooms: 0,
     area: 1200,
@@ -68,7 +87,10 @@ export const mockProperties: Property[] = [
       'https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1000'
     ],
     features: ['Vista Mar', 'Acesso Estrada', 'Zona Calma'],
-    featured: false
+    featured: false,
+    visibility: 'visível',
+    createdAt: now,
+    updatedAt: now
   },
   {
     id: '5',
@@ -78,6 +100,8 @@ export const mockProperties: Property[] = [
     location: 'Tavira, Algarve',
     type: 'Vivenda',
     status: 'Usado',
+    commercialStatus: 'disponível',
+    publicationStatus: 'publicado',
     bedrooms: 3,
     bathrooms: 2,
     area: 150,
@@ -85,7 +109,10 @@ export const mockProperties: Property[] = [
       'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1000'
     ],
     features: ['Pátio', 'Churrasqueira', 'Centro Histórico'],
-    featured: false
+    featured: false,
+    visibility: 'visível',
+    createdAt: now,
+    updatedAt: now
   },
   {
     id: '6',
@@ -95,6 +122,8 @@ export const mockProperties: Property[] = [
     location: 'Loulé, Algarve',
     type: 'Comercial',
     status: 'Usado',
+    commercialStatus: 'disponível',
+    publicationStatus: 'publicado',
     bedrooms: 0,
     bathrooms: 1,
     area: 85,
@@ -102,6 +131,9 @@ export const mockProperties: Property[] = [
       'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1000'
     ],
     features: ['Alarme', 'Extração de Fumos', 'Montra'],
-    featured: false
+    featured: false,
+    visibility: 'visível',
+    createdAt: now,
+    updatedAt: now
   }
 ];

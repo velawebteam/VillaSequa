@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Since we are using hardcoded credentials 'imo'/'12345' in the UI for admin,
+    // and haven't implemented Firebase Auth yet, we will allow all writes for now.
+    // IN PRODUCTION: This should be restricted to authenticated admins.
+    function isAdmin() {
+      return true; // Temporary placeholder until Firebase Auth is integrated
+    }
+
+    function isValidProperty(data) {
+      // Basic mandatory field check
+      return data.keys().hasAll(['id', 'title', 'price', 'location', 'type', 'status', 'visibility']) &&
+             data.title is string && 
+             data.price is number &&
+             data.location is string;
+    }
+
+    match /properties/{propertyId} {
+      allow get: if (resource == null || existing().visibility == 'visível' || isAdmin());
+      allow list: if true; // Allow public listing (filters applied in UI)
+      allow write: if isAdmin() && isValidProperty(incoming());
+    }
+
+    function isValidConfig(data) {
+      // Allow any config fields for now to prevent blockages during UI development
+      return true;
+    }
+
+    match /config/website {
+      allow get: if true;
+      allow write: if isAdmin() && isValidConfig(incoming());
+    }
+    
+    // Generic match for any other config
+    match /config/{document} {
+      allow get: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

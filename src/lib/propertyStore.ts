@@ -34,6 +34,7 @@ export const getProperties = (): Property[] => {
         ...p,
         commercialStatus: p.commercialStatus || 'disponível',
         publicationStatus: p.publicationStatus || 'publicado',
+        visibility: p.visibility || 'visível',
         createdAt: p.createdAt || new Date().toISOString(),
         updatedAt: p.updatedAt || new Date().toISOString()
       }));
@@ -68,6 +69,7 @@ export const addProperty = (property: Partial<Property>): Property => {
     status: property.status || 'Novo',
     commercialStatus: property.commercialStatus || 'disponível',
     publicationStatus: property.publicationStatus || 'publicado',
+    visibility: property.visibility || 'visível',
     bedrooms: property.bedrooms || 0,
     bathrooms: property.bathrooms || 0,
     area: property.area || 0,
@@ -122,6 +124,7 @@ export const exportPropertiesToXml = (properties: Property[]): string => {
     xml += `    <bathrooms>${p.bathrooms}</bathrooms>\n`;
     xml += `    <area>${p.area}</area>\n`;
     xml += `    <featured>${p.featured ? 'true' : 'false'}</featured>\n`;
+    xml += `    <visibility>${p.visibility}</visibility>\n`;
     xml += `    <images>\n`;
     p.images.forEach(img => {
       xml += `      <image><![CDATA[${img}]]></image>\n`;
@@ -145,6 +148,7 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
   
   const nodes = xmlDoc.querySelectorAll('property, imovel, item, listing');
   const parsedProperties: Property[] = [];
+  const now = new Date().toISOString();
 
   nodes.forEach((node, index) => {
     const getText = (tag: string) => node.querySelector(tag)?.textContent || '';
@@ -192,6 +196,7 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
     }
 
     const featured = getText('featured') === 'true' || getText('destaque') === '1' || index < 3;
+    const visibility = (getText('visibility') || getText('visibilidade')) === 'oculto' ? 'oculto' : 'visível';
 
     parsedProperties.push({
       id: getText('id') || `crm_${Date.now()}_${index}`,
@@ -201,12 +206,17 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
       location,
       type,
       status,
+      commercialStatus: 'disponível',
+      publicationStatus: 'publicado',
+      visibility,
       bedrooms,
       bathrooms,
       area,
       images,
       features,
-      featured
+      featured,
+      createdAt: now,
+      updatedAt: now
     });
   });
 

@@ -6,9 +6,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Property, View, SearchFilters } from './types';
-import { getProperties } from './lib/propertyStore';
-import { AdminView } from './components/AdminView';
 import { getFavorites, toggleFavorite } from './lib/favorites';
+import { getPropertiesFromFirestore, seedProperties } from './lib/firestoreService';
+import { getWebsiteConfig, WebsiteConfig } from './lib/websiteService';
+import { mockProperties } from './data/mockProperties';
+import { AdminView } from './components/AdminView';
 import { 
   Search, 
   Heart, 
@@ -363,19 +365,25 @@ const PropertyCard = ({ property, onSelect, onToggleFavorite, isFav, ...props }:
 
 // --- Views ---
 
-import { getProperties } from './lib/propertyStore';
-
-const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites }: { 
+const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, onToggleFavorite, favorites, config }: { 
+  properties: Property[],
   onSelectProperty: (p: Property) => void,
   onViewChange: (v: View) => void,
   onToggleFavorite: (id: string) => void,
-  favorites: string[]
+  favorites: string[],
+  config?: WebsiteConfig
 }) => {
-  const properties = getProperties();
+  const properties = initialProps.filter(p => p.visibility === 'visível');
   const featured = properties.filter(p => p.featured).slice(0, 3);
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 500], [0, 200]);
   const heroOpacity = useTransform(scrollY, [0, 500], [1, 0]);
+
+  // Default values
+  const heroTitle = config?.heroTitle || 'Procura casa no Algarve?';
+  const heroSubtitle = config?.heroSubtitle || '';
+  const heroImage = config?.heroImage || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=2000';
+  const heroButtonText = config?.heroButtonText || 'Ver seleção';
   
   return (
     <div className="overflow-x-hidden">
@@ -386,7 +394,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
           className="absolute inset-0 z-0"
         >
           <img 
-            src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=2000" 
+            src={heroImage} 
             alt="Algarve Luxury Real Estate"
             className="w-full h-full object-cover scale-110"
           />
@@ -404,10 +412,21 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-white leading-[1.1] mb-10 md:mb-12 tracking-tight"
+              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-white leading-[1.1] mb-6 tracking-tight"
             >
-              Procura casa <span className="text-brand-secondary italic font-normal">no Algarve?</span>
+              {heroTitle}
             </motion.h1>
+
+            {heroSubtitle && (
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                className="text-white/80 text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-light leading-relaxed"
+              >
+                {heroSubtitle}
+              </motion.p>
+            )}
             
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
@@ -421,7 +440,7 @@ const HomeView = ({ onSelectProperty, onViewChange, onToggleFavorite, favorites 
                 onClick={() => onViewChange('listing')}
                 className="bg-brand-secondary text-white px-8 md:px-12 py-5 rounded-none text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold shadow-2xl min-w-[200px] sm:min-w-[240px] hover:bg-brand-secondary/90 transition-all"
               >
-                Ver seleção
+                {heroButtonText}
               </motion.button>
               <motion.button 
                 whileHover={{ scale: 1.05, backgroundColor: 'rgba(255, 255, 255, 0.2)' }}
@@ -901,6 +920,21 @@ export default function App() {
   }, []);
 
   const [propertiesVersion, setPropertiesVersion] = useState(0);
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
+  const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>({});
+
+  useEffect(() => {
+    const fetchData = async () => {
+      await seedProperties(mockProperties);
+      const [props, config] = await Promise.all([
+        getPropertiesFromFirestore(),
+        getWebsiteConfig()
+      ]);
+      setAllProperties(props);
+      setWebsiteConfig(config);
+    };
+    fetchData();
+  }, [propertiesVersion]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -940,14 +974,36 @@ export default function App() {
         />
         
         <Routes>
-          <Route path="/" element={<HomeView onSelectProperty={handleSelectProperty} onViewChange={handleViewChange} onToggleFavorite={handleToggleFavorite} favorites={favorites} />} />
-          <Route path="/listing" element={<ListingView onSelectProperty={handleSelectProperty} onToggleFavorite={handleToggleFavorite} favorites={favorites} initialFilters={searchFilters} />} />
-          <Route path="/admin" element={<AdminView onViewChange={handleViewChange} onPropertiesChange={() => setPropertiesVersion(v => v + 1)} />} />
+          <Route path="/" element={<HomeView 
+            properties={allProperties}
+            onSelectProperty={handleSelectProperty} 
+            onViewChange={handleViewChange} 
+            onToggleFavorite={handleToggleFavorite} 
+            favorites={favorites} 
+            config={websiteConfig}
+          />} />
+          <Route path="/listing" element={<ListingView 
+            properties={allProperties}
+            onSelectProperty={handleSelectProperty} 
+            onToggleFavorite={handleToggleFavorite} 
+            favorites={favorites} 
+            initialFilters={searchFilters} 
+          />} />
+          <Route path="/admin" element={<AdminView 
+            onViewChange={handleViewChange} 
+            onPropertiesChange={() => setPropertiesVersion(v => v + 1)} 
+          />} />
           <Route path="/sell" element={<SellView />} />
           <Route path="/services" element={<ServicesView onViewChange={handleViewChange} />} />
           <Route path="/about" element={<AboutView onViewChange={handleViewChange} />} />
-          <Route path="/contact" element={<ContactView properties={getProperties()} />} />
-          <Route path="/favorites" element={<FavoritesView onSelectProperty={handleSelectProperty} onToggleFavorite={handleToggleFavorite} favorites={favorites} onViewChange={handleViewChange} />} />
+          <Route path="/contact" element={<ContactView properties={allProperties} />} />
+          <Route path="/favorites" element={<FavoritesView 
+            properties={allProperties}
+            onSelectProperty={handleSelectProperty} 
+            onToggleFavorite={handleToggleFavorite} 
+            favorites={favorites} 
+            onViewChange={handleViewChange} 
+          />} />
         </Routes>
         
         <Footer onViewChange={handleViewChange} />
@@ -958,7 +1014,8 @@ export default function App() {
 
 // --- Placeholder for other views to keep App.tsx functional ---
 
-const ListingView = ({ onSelectProperty, onToggleFavorite, favorites, initialFilters }: { 
+const ListingView = ({ properties: initialProps, onSelectProperty, onToggleFavorite, favorites, initialFilters }: { 
+  properties: Property[],
   onSelectProperty: (p: Property) => void,
   onToggleFavorite: (id: string) => void,
   favorites: string[],
@@ -966,7 +1023,7 @@ const ListingView = ({ onSelectProperty, onToggleFavorite, favorites, initialFil
 }) => {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('Todos');
-  const properties = getProperties();
+  const properties = initialProps.filter(p => p.visibility === 'visível');
   
   const filtered = properties.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.location.toLowerCase().includes(search.toLowerCase());
@@ -1202,13 +1259,14 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
   );
 };
 
-const FavoritesView = ({ onSelectProperty, onToggleFavorite, favorites, onViewChange }: { 
+const FavoritesView = ({ properties, onSelectProperty, onToggleFavorite, favorites, onViewChange }: { 
+  properties: Property[],
   onSelectProperty: (p: Property) => void,
   onToggleFavorite: (id: string) => void,
   favorites: string[],
   onViewChange: (v: View) => void
 }) => {
-  const favoriteProperties = mockProperties.filter(p => favorites.includes(p.id));
+  const favoriteProperties = properties.filter(p => favorites.includes(p.id) && p.visibility === 'visível');
 
   return (
     <div className="pt-32 pb-24 min-h-screen">

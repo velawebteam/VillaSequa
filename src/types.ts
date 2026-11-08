@@ -19,6 +19,7 @@ export interface Property {
   images: string[];
   features: string[];
   featured?: boolean;
+  visibility: 'visível' | 'oculto';
   createdAt: string;
   updatedAt: string;
 }

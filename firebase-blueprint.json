@@ -1,0 +1,52 @@
+{
+  "entities": {
+    "Property": {
+      "title": "Property",
+      "description": "A real estate property listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string", "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 5000 },
+        "price": { "type": "number" },
+        "location": { "type": "string", "maxLength": 200 },
+        "type": { "type": "string", "enum": ["Apartamento", "Vivenda", "Terreno", "Comercial"] },
+        "status": { "type": "string", "enum": ["Novo", "Usado", "Em Construção"] },
+        "commercialStatus": { "type": "string", "enum": ["disponível", "reservado", "vendido", "arrendado", "indisponível"] },
+        "publicationStatus": { "type": "string", "enum": ["publicado", "rascunho", "nao_publicado"] },
+        "bedrooms": { "type": "number" },
+        "bathrooms": { "type": "number" },
+        "area": { "type": "number" },
+        "images": { "type": "array", "items": { "type": "string" } },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "featured": { "type": "boolean" },
+        "visibility": { "type": "string", "enum": ["visível", "oculto"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "price", "location", "type", "status", "visibility"]
+    },
+    "WebsiteConfig": {
+      "title": "Website Configuration",
+      "description": "Global settings for website content",
+      "type": "object",
+      "properties": {
+        "heroTitle": { "type": "string", "maxLength": 500 },
+        "heroSubtitle": { "type": "string", "maxLength": 1000 },
+        "heroImage": { "type": "string" },
+        "heroButtonText": { "type": "string", "maxLength": 100 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "properties": {
+      "schema": "Property",
+      "description": "Collection of all property listings"
+    },
+    "config/website": {
+      "schema": "WebsiteConfig",
+      "description": "Global website configuration"
+    }
+  }
+}
