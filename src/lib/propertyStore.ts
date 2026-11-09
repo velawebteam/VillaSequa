@@ -35,6 +35,7 @@ export const getProperties = (): Property[] => {
         commercialStatus: p.commercialStatus || 'disponível',
         publicationStatus: p.publicationStatus || 'publicado',
         visibility: p.visibility || 'visível',
+        category: p.category || 'venda',
         createdAt: p.createdAt || new Date().toISOString(),
         updatedAt: p.updatedAt || new Date().toISOString()
       }));
@@ -76,6 +77,7 @@ export const addProperty = (property: Partial<Property>): Property => {
     images: property.images || [],
     features: property.features || [],
     featured: property.featured || false,
+    category: property.category || 'venda',
     createdAt: now,
     updatedAt: now,
   };
@@ -125,6 +127,7 @@ export const exportPropertiesToXml = (properties: Property[]): string => {
     xml += `    <area>${p.area}</area>\n`;
     xml += `    <featured>${p.featured ? 'true' : 'false'}</featured>\n`;
     xml += `    <visibility>${p.visibility}</visibility>\n`;
+    xml += `    <category>${p.category}</category>\n`;
     xml += `    <images>\n`;
     p.images.forEach(img => {
       xml += `      <image><![CDATA[${img}]]></image>\n`;
@@ -215,6 +218,7 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
       images,
       features,
       featured,
+      category: (getText('category') || getText('categoria')) as Property['category'] || (rawStatus.includes('construcao') ? 'construcao' : 'venda'),
       createdAt: now,
       updatedAt: now
     });

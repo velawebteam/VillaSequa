@@ -21,20 +21,39 @@ import {
   Loader2
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { addPropertyToFirestore, updatePropertyInFirestore, deletePropertyFromFirestore, getPropertiesFromFirestore, deleteAllPropertiesFromFirestore } from '../lib/firestoreService';
+import { 
+  addPropertyToFirestore, 
+  updatePropertyInFirestore, 
+  deletePropertyFromFirestore, 
+  getPropertiesFromFirestore, 
+  deleteAllPropertiesFromFirestore,
+  addClientToFirestore,
+  getClientsFromFirestore,
+  deleteClientFromFirestore,
+  getLeadsFromFirestore,
+  deleteLeadFromFirestore
+} from '../lib/firestoreService';
+import { Client, Lead } from '../types';
 import { uploadImage } from '../lib/storageService';
 import { getWebsiteConfig, updateWebsiteConfig, WebsiteConfig } from '../lib/websiteService';
 import { 
   Type, 
-  Image as ImageIcon, 
   Settings, 
   Layout, 
   Palette,
   ExternalLink,
   Save,
   RotateCcw,
-  AlignLeft
+  AlignLeft,
+  Image as ImageIcon,
+  Users,
+  Mail as MailIcon,
+  Briefcase,
+  UserPlus,
+  MapPin,
+  ArrowRight
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface AdminViewProps {
   onViewChange: (v: View) => void;
@@ -42,19 +61,25 @@ interface AdminViewProps {
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onPropertiesChange }) => {
+  const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
 
-  const [sidebarTab, setSidebarTab] = useState<'imoveis' | 'website'>('imoveis');
-  const [activeTab, setActiveTab] = useState<'add' | 'list' | 'sync' | 'export' | 'edit'>('add');
-  const [websiteTab, setWebsiteTab] = useState<'textos' | 'imagens' | 'titulos'>('titulos');
+  const [sidebarTab, setSidebarTab] = useState<'imoveis' | 'website' | 'clientes'>('imoveis');
+  const [activeTab, setActiveTab] = useState<'add' | 'list' | 'sync' | 'export' | 'edit' | 'venda' | 'arrendamento' | 'construcao'>('add');
+  const [clientesTab, setClientesTab] = useState<'list' | 'leads' | 'add'>('list');
+  const [websiteSection, setWebsiteSection] = useState<'hero' | 'evaluation'>('hero');
+  const [websiteTab, setWebsiteTab] = useState<'titulos' | 'textos' | 'imagens'>('titulos');
   const [properties, setProperties] = useState<Property[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
 
   // Website Config State
   const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>({});
+  const [liveConfig, setLiveConfig] = useState<WebsiteConfig>({});
   const [isConfigLoading, setIsConfigLoading] = useState(false);
   const [configSuccess, setConfigSuccess] = useState('');
 
@@ -67,6 +92,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [status, setStatus] = useState<Property['status'] | ''>('Novo');
   const [commercialStatus, setCommercialStatus] = useState<Property['commercialStatus'] | ''>('disponível');
   const [publicationStatus, setPublicationStatus] = useState<Property['publicationStatus'] | ''>('publicado');
+  const [category, setCategory] = useState<Property['category']>('venda');
   const [bedrooms, setBedrooms] = useState('0');
   const [bathrooms, setBathrooms] = useState('0');
   const [area, setArea] = useState('0');
@@ -77,6 +103,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [uploading, setUploading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [isSeeding, setIsSeeding] = useState(false);
+
+  // Client Form State
+  const [clientFirstName, setClientFirstName] = useState('');
+  const [clientLastName, setClientLastName] = useState('');
+  const [clientPhone, setClientPhone] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientInterest, setClientInterest] = useState<Client['interest']>('compra');
+  const [clientSaving, setClientSaving] = useState(false);
 
   // XML Sync state
   const [xmlInput, setXmlInput] = useState('');
@@ -95,12 +129,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (username === 'imo' && password === '12345') {
-      const [allProps, config] = await Promise.all([
+      const [allProps, config, allClients, allLeads] = await Promise.all([
         getPropertiesFromFirestore(),
-        getWebsiteConfig()
+        getWebsiteConfig(),
+        getClientsFromFirestore(),
+        getLeadsFromFirestore()
       ]);
       setProperties(allProps);
-      setWebsiteConfig(config);
+      setWebsiteConfig({}); // Start with empty fields for "changes"
+      setLiveConfig(config);
+      setClients(allClients);
+      setLeads(allLeads);
       setIsLoggedIn(true);
       setLoginError(false);
     } else {
@@ -131,6 +170,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
         images: uploadedImages,
         features: featuresStr.split(',').map(s => s.trim()).filter(Boolean),
         featured: isFeatured,
+        category,
         visibility
       });
       console.log('Property saved successfully:', savedProp.id);
@@ -148,6 +188,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
       setStatus('');
       setCommercialStatus('');
       setPublicationStatus('');
+      setCategory('venda');
       setBedrooms('');
       setBathrooms('');
       setArea('');
@@ -277,6 +318,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
     setIsConfigLoading(true);
     try {
       await updateWebsiteConfig(websiteConfig);
+      const updatedConfig = { ...liveConfig, ...websiteConfig };
+      setLiveConfig(updatedConfig);
+      setWebsiteConfig({}); // Clear change fields after success
       onPropertiesChange();
       setConfigSuccess('Configurações guardadas com sucesso!');
       setTimeout(() => setConfigSuccess(''), 3000);
@@ -286,6 +330,49 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
       alert('ERRO AO GUARDAR CONFIGURAÇÕES: ' + errorMsg);
     } finally {
       setIsConfigLoading(false);
+    }
+  };
+
+  const handleAddClient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setClientSaving(true);
+    try {
+      await addClientToFirestore({
+        firstName: clientFirstName,
+        lastName: clientLastName,
+        phone: clientPhone,
+        email: clientEmail,
+        interest: clientInterest
+      });
+      const allClients = await getClientsFromFirestore();
+      setClients(allClients);
+      setClientFirstName('');
+      setClientLastName('');
+      setClientPhone('');
+      setClientEmail('');
+      setClientInterest('compra');
+      setClientesTab('list');
+      alert('Cliente adicionado com sucesso!');
+    } catch (err) {
+      alert('Erro ao adicionar cliente.');
+    } finally {
+      setClientSaving(false);
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    if (window.confirm('Tem a certeza que deseja eliminar este cliente?')) {
+      await deleteClientFromFirestore(id);
+      const allClients = await getClientsFromFirestore();
+      setClients(allClients);
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    if (window.confirm('Tem a certeza que deseja eliminar este lead?')) {
+      await deleteLeadFromFirestore(id);
+      const allLeads = await getLeadsFromFirestore();
+      setLeads(allLeads);
     }
   };
 
@@ -352,10 +439,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
 
           <div className="mt-8 text-center">
             <button 
-              onClick={() => onViewChange('home')}
+              onClick={() => navigate('/')}
               className="text-xs text-gray-500 hover:text-brand-primary flex items-center justify-center gap-2 mx-auto"
             >
-              <ArrowLeft size={14} /> Voltar ao site público
+              <ArrowLeft size={14} /> Sair do BackOffice
             </button>
           </div>
         </motion.div>
@@ -392,13 +479,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
             <Layout size={18} /> Website
           </button>
 
+          <button 
+            onClick={() => setSidebarTab('clientes')}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all rounded-none ${sidebarTab === 'clientes' ? 'bg-brand-secondary text-white shadow-lg' : 'hover:bg-white/5 text-white/70'}`}
+          >
+            <Users size={18} /> Clientes
+          </button>
+
           <div className="pt-6 pb-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold px-4">Sistema</div>
           
           <button 
-            onClick={() => onViewChange('home')}
+            onClick={() => navigate('/')}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all text-white/70 hover:bg-white/5"
           >
-            <ExternalLink size={18} /> Ver Site
+            <ExternalLink size={18} /> Sair do BackOffice
           </button>
 
           <button 
@@ -431,8 +525,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
             <div className="h-4 w-[1px] bg-gray-200"></div>
             <p className="text-sm font-bold text-brand-primary">
               {sidebarTab === 'imoveis' 
-                ? (activeTab === 'add' ? 'Adicionar Novo' : activeTab === 'list' ? 'Listagem Geral' : activeTab === 'sync' ? 'Sincronização CRM' : activeTab === 'export' ? 'Exportação' : 'Editar Imóvel')
-                : (websiteTab === 'titulos' ? 'Edição de Títulos' : websiteTab === 'textos' ? 'Edição de Textos' : 'Edição de Imagens')}
+                ? (activeTab === 'add' ? 'Adicionar Novo' : 
+                   activeTab === 'list' ? 'Todos os Imóveis' : 
+                   activeTab === 'venda' ? 'Compra/Venda' : 
+                   activeTab === 'arrendamento' ? 'Arrendamento' : 
+                   activeTab === 'construcao' ? 'Nova Construção' : 
+                   activeTab === 'sync' ? 'Sincronização CRM' : 
+                   activeTab === 'export' ? 'Exportação' : 'Editar Imóvel')
+                : `${websiteSection === 'hero' ? 'Hero' : 'Avaliação'} > ${websiteTab === 'titulos' ? 'Títulos' : websiteTab === 'textos' ? 'Textos' : 'Imagens'}`}
             </p>
           </div>
 
@@ -454,7 +554,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
         </header>
 
         <div className="p-8">
-          {sidebarTab === 'imoveis' ? (
+          {sidebarTab === 'imoveis' && (
             <>
               {/* Tab Navigation for Imoveis */}
               <div className="flex border-b border-gray-200 mb-8 bg-white shadow-sm overflow-x-auto">
@@ -472,7 +572,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                     activeTab === 'list' || activeTab === 'edit' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
                   }`}
                 >
-                  <List size={18} /> Lista de Imóveis ({properties.length})
+                  <List size={18} /> Todos os Imóveis ({properties.length})
+                </button>
+                <button 
+                  onClick={() => setActiveTab('venda')}
+                  className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                    activeTab === 'venda' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Compra/Venda ({properties.filter(p => p.category === 'venda').length})
+                </button>
+                <button 
+                  onClick={() => setActiveTab('arrendamento')}
+                  className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                    activeTab === 'arrendamento' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Arrendamento ({properties.filter(p => p.category === 'arrendamento').length})
+                </button>
+                <button 
+                  onClick={() => setActiveTab('construcao')}
+                  className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                    activeTab === 'construcao' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  Nova Construção ({properties.filter(p => p.category === 'construcao').length})
                 </button>
                 <button 
                   onClick={() => setActiveTab('sync')}
@@ -519,6 +643,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                     <div>
                       <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Preço (€)</label>
                       <input type="number" required value={price} onChange={(e) => setPrice(e.target.value)} placeholder="450000" className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Categoria</label>
+                      <select required value={category} onChange={(e) => setCategory(e.target.value as Property['category'])} className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm cursor-pointer text-gray-900">
+                        <option value="venda">Compra/Venda</option>
+                        <option value="arrendamento">Arrendamento</option>
+                        <option value="construcao">Nova Construção</option>
+                      </select>
                     </div>
 
                     <div>
@@ -650,16 +783,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               )}
 
               {/* TAB 2: LIST & MANAGE PROPERTIES */}
-              {activeTab === 'list' && (
+              {(activeTab === 'list' || activeTab === 'venda' || activeTab === 'arrendamento' || activeTab === 'construcao') && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-xl p-8 md:p-12 border border-gray-100">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                     <div>
-                      <h2 className="text-2xl font-serif font-bold text-brand-primary mb-1">Lista de Imóveis Atuais</h2>
+                      <h2 className="text-2xl font-serif font-bold text-brand-primary mb-1">
+                        {activeTab === 'list' ? 'Todos os Imóveis' : 
+                         activeTab === 'venda' ? 'Imóveis para Compra/Venda' : 
+                         activeTab === 'arrendamento' ? 'Imóveis para Arrendamento' : 'Imóveis em Nova Construção'}
+                      </h2>
                       <p className="text-gray-500 text-sm">Gerencie os imóveis publicados no site.</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="bg-brand-accent/40 px-4 py-2 font-bold text-brand-primary text-sm">
-                        Total: {properties.length} resultados
+                        Total: {properties.filter(p => {
+                          if (activeTab === 'venda') return p.category === 'venda';
+                          if (activeTab === 'arrendamento') return p.category === 'arrendamento';
+                          if (activeTab === 'construcao') return p.category === 'construcao';
+                          return true;
+                        }).length} resultados
                       </div>
                       <button onClick={handleDeleteAll} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 text-xs uppercase tracking-wider font-bold transition-all shadow-md flex items-center gap-2"><Trash2 size={14} /> Eliminar Lista</button>
                       <button onClick={handleSeed} disabled={isSeeding} className="bg-brand-primary text-brand-secondary px-4 py-2 text-xs uppercase tracking-wider font-bold transition-all shadow-md flex items-center gap-2">
@@ -689,27 +831,34 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                   </div>
 
                   <div className="space-y-4">
-                    {properties.filter(p => 
-                      (p.title.toLowerCase().includes(searchTitle.toLowerCase())) &&
-                      (searchRef === '' || p.id.toLowerCase().includes(searchRef.toLowerCase())) &&
-                      (p.location.toLowerCase().includes(searchLocation.toLowerCase())) &&
-                      (filterType === '' || p.type === filterType) &&
-                      (filterVisibility === '' || p.visibility === filterVisibility) &&
-                      (filterFeatures === '' || p.features.some(f => f.toLowerCase().includes(filterFeatures.toLowerCase()))) &&
-                      (minPrice === '' || p.price >= Number(minPrice)) &&
-                      (maxPrice === '' || p.price <= Number(maxPrice))
-                    ).map((property) => (
+                    {properties.filter(p => {
+                      // Category Filter
+                      if (activeTab === 'venda' && p.category !== 'venda') return false;
+                      if (activeTab === 'arrendamento' && p.category !== 'arrendamento') return false;
+                      if (activeTab === 'construcao' && p.category !== 'construcao') return false;
+                      
+                      // Search Filters
+                      return (p.title.toLowerCase().includes(searchTitle.toLowerCase())) &&
+                             (searchRef === '' || p.id.toLowerCase().includes(searchRef.toLowerCase())) &&
+                             (p.location.toLowerCase().includes(searchLocation.toLowerCase())) &&
+                             (filterType === '' || p.type === filterType) &&
+                             (filterVisibility === '' || p.visibility === filterVisibility) &&
+                             (filterFeatures === '' || p.features.some(f => f.toLowerCase().includes(filterFeatures.toLowerCase()))) &&
+                             (minPrice === '' || p.price >= Number(minPrice)) &&
+                             (maxPrice === '' || p.price <= Number(maxPrice));
+                    }).map((property) => (
                       <div key={property.id} className="flex flex-col md:flex-row items-center justify-between p-6 bg-gray-50 border border-gray-200 gap-6">
                         <div className="flex items-center gap-4 w-full md:w-auto">
                           <img src={property.images[0]} alt={property.title} className="w-24 h-20 object-cover shadow-sm shrink-0" />
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-[10px] font-bold uppercase tracking-widest bg-brand-secondary text-white px-2 py-0.5">{property.type}</span>
+                              {property.category === 'construcao' && <span className="text-[10px] font-bold uppercase tracking-widest bg-blue-500 text-white px-2 py-0.5">Nova Construção</span>}
                               {property.featured && <span className="text-[10px] font-bold uppercase tracking-widest bg-amber-500 text-white px-2 py-0.5 flex items-center gap-1"><Star size={10} className="fill-white" /> Destaque</span>}
                               <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 ${property.visibility === 'visível' ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'}`}>{property.visibility}</span>
                             </div>
                             <h3 className="font-serif font-bold text-brand-primary text-lg">{property.title}</h3>
-                            <p className="text-xs text-gray-500">{property.location} • €{property.price.toLocaleString()}</p>
+                            <p className="text-xs text-gray-500">{property.location} • €{property.price.toLocaleString()} {property.category === 'arrendamento' ? '/mês' : ''}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 w-full md:w-auto justify-end">
@@ -739,6 +888,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                       <input type="number" value={editingProperty.price} onChange={e => setEditingProperty({...editingProperty, price: Number(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
                       <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Localização</label>
                       <input type="text" value={editingProperty.location} onChange={e => setEditingProperty({...editingProperty, location: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm" />
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Categoria</label>
+                      <select value={editingProperty.category} onChange={e => setEditingProperty({...editingProperty, category: e.target.value as Property['category']})} className="w-full p-3 bg-gray-50 border border-gray-200 text-sm cursor-pointer">
+                        <option value="venda">Compra/Venda</option>
+                        <option value="arrendamento">Arrendamento</option>
+                        <option value="construcao">Nova Construção</option>
+                      </select>
                     </div>
                     <div className="md:col-span-2 space-y-4">
                       <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 block">Galeria de Imagens</label>
@@ -822,15 +977,34 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                 </motion.div>
               )}
             </>
-          ) : (
+          )}
+
+          {sidebarTab === 'website' && (
             <div className="space-y-8">
-              {/* Website Section Header */}
-              <div className="flex flex-col gap-1">
-                <h1 className="text-3xl font-serif font-bold text-brand-primary">Personalização do Website</h1>
-                <p className="text-gray-500 text-sm">Altere os conteúdos visíveis na secção principal (Hero) do seu site.</p>
+              {/* Website Section Selection (Level 1) */}
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-serif font-bold text-brand-primary">Personalização do Website</h1>
+                  <p className="text-gray-500 text-sm">Selecione a secção e o tipo de conteúdo que deseja alterar.</p>
+                </div>
+                
+                <div className="flex gap-4 p-1 bg-gray-200 w-fit rounded-none">
+                  <button 
+                    onClick={() => setWebsiteSection('hero')}
+                    className={`px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all ${websiteSection === 'hero' ? 'bg-brand-primary text-white shadow-md' : 'text-gray-500 hover:text-brand-primary'}`}
+                  >
+                    Secção Hero (Topo)
+                  </button>
+                  <button 
+                    onClick={() => setWebsiteSection('evaluation')}
+                    className={`px-6 py-2 text-xs font-bold uppercase tracking-widest transition-all ${websiteSection === 'evaluation' ? 'bg-brand-primary text-white shadow-md' : 'text-gray-500 hover:text-brand-primary'}`}
+                  >
+                    Secção de Avaliação
+                  </button>
+                </div>
               </div>
 
-              {/* Website Sub-Tabs */}
+              {/* Website Content Type Selection (Level 2) */}
               <div className="flex border-b border-gray-200 bg-white shadow-sm overflow-x-auto">
                 <button 
                   onClick={() => setWebsiteTab('titulos')}
@@ -838,7 +1012,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                     websiteTab === 'titulos' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
                   }`}
                 >
-                  <Type size={18} /> Edição de Títulos
+                  <Type size={18} /> Títulos
                 </button>
                 <button 
                   onClick={() => setWebsiteTab('textos')}
@@ -846,7 +1020,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                     websiteTab === 'textos' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
                   }`}
                 >
-                  <AlignLeft size={18} /> Edição de Textos
+                  <AlignLeft size={18} /> Textos
                 </button>
                 <button 
                   onClick={() => setWebsiteTab('imagens')}
@@ -854,7 +1028,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                     websiteTab === 'imagens' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
                   }`}
                 >
-                  <ImageIcon size={18} /> Edição de Imagens
+                  <ImageIcon size={18} /> Imagens
                 </button>
               </div>
 
@@ -873,29 +1047,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                       <div className="space-y-6">
                         <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
                           <Type className="text-brand-secondary" size={20} />
-                          <h3 className="font-serif font-bold text-brand-primary text-xl">Secção Inicial: Títulos</h3>
+                          <h3 className="font-serif font-bold text-brand-primary text-xl">
+                            {websiteSection === 'hero' ? 'Secção Hero: Título' : 'Secção Avaliação: Título'}
+                          </h3>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Título Principal (Hero)</label>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Título Principal</label>
                           <input 
                             type="text" 
-                            value={websiteConfig.heroTitle || ''} 
-                            onChange={e => setWebsiteConfig({...websiteConfig, heroTitle: e.target.value})}
-                            placeholder="Ex: Procura casa no Algarve?"
+                            value={websiteSection === 'hero' ? (websiteConfig.heroTitle || '') : (websiteConfig.evalTitle || '')} 
+                            onChange={e => setWebsiteConfig({
+                              ...websiteConfig, 
+                              [websiteSection === 'hero' ? 'heroTitle' : 'evalTitle']: e.target.value
+                            })}
+                            placeholder={websiteSection === 'hero' ? (liveConfig.heroTitle || 'Título Hero') : (liveConfig.evalTitle || 'Título Avaliação')}
                             className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm font-serif"
                           />
-                          <p className="text-[9px] text-gray-400">Este título aparece em destaque na página inicial.</p>
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Texto do Botão Principal</label>
-                          <input 
-                            type="text" 
-                            value={websiteConfig.heroButtonText || ''} 
-                            onChange={e => setWebsiteConfig({...websiteConfig, heroButtonText: e.target.value})}
-                            placeholder="Ex: Ver seleção"
-                            className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
-                          />
-                        </div>
+                        {websiteSection === 'hero' && (
+                          <div className="space-y-2">
+                            <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Texto do Botão</label>
+                            <input 
+                              type="text" 
+                              value={websiteConfig.heroButtonText || ''} 
+                              onChange={e => setWebsiteConfig({...websiteConfig, heroButtonText: e.target.value})}
+                              placeholder={liveConfig.heroButtonText || 'Ver seleção'}
+                              className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -903,18 +1083,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                       <div className="space-y-6">
                         <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
                           <AlignLeft className="text-brand-secondary" size={20} />
-                          <h3 className="font-serif font-bold text-brand-primary text-xl">Secção Inicial: Textos</h3>
+                          <h3 className="font-serif font-bold text-brand-primary text-xl">
+                            {websiteSection === 'hero' ? 'Secção Hero: Texto' : 'Secção Avaliação: Texto'}
+                          </h3>
                         </div>
                         <div className="space-y-2">
-                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Subtítulo (Hero)</label>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Subtítulo / Descrição</label>
                           <textarea 
-                            rows={4}
-                            value={websiteConfig.heroSubtitle || ''} 
-                            onChange={e => setWebsiteConfig({...websiteConfig, heroSubtitle: e.target.value})}
-                            placeholder="Descreva a essência da sua imobiliária..."
+                            rows={6}
+                            value={websiteSection === 'hero' ? (websiteConfig.heroSubtitle || '') : (websiteConfig.evalSubtitle || '')} 
+                            onChange={e => setWebsiteConfig({
+                              ...websiteConfig, 
+                              [websiteSection === 'hero' ? 'heroSubtitle' : 'evalSubtitle']: e.target.value
+                            })}
+                            placeholder={websiteSection === 'hero' ? (liveConfig.heroSubtitle || 'Subtítulo Hero') : (liveConfig.evalSubtitle || 'Subtítulo Avaliação')}
                             className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm leading-relaxed resize-none"
                           />
-                          <p className="text-[9px] text-gray-400">Este parágrafo aparece por baixo do título principal.</p>
                         </div>
                       </div>
                     )}
@@ -923,17 +1107,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                       <div className="space-y-6">
                         <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
                           <ImageIcon className="text-brand-secondary" size={20} />
-                          <h3 className="font-serif font-bold text-brand-primary text-xl">Secção Inicial: Imagens</h3>
+                          <h3 className="font-serif font-bold text-brand-primary text-xl">
+                            {websiteSection === 'hero' ? 'Secção Hero: Imagem' : 'Secção Avaliação: Imagem'}
+                          </h3>
                         </div>
                         <div className="space-y-4">
-                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Imagem de Fundo (Background)</label>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500">Imagem Principal</label>
                           
-                          {websiteConfig.heroImage && (
+                          {(websiteSection === 'hero' ? websiteConfig.heroImage : websiteConfig.evalImage) && (
                             <div className="relative aspect-video w-full overflow-hidden border border-gray-200 group">
-                              <img src={websiteConfig.heroImage} alt="Hero Background" className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" />
+                              <img src={websiteSection === 'hero' ? websiteConfig.heroImage : websiteConfig.evalImage} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-500" />
                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <button 
-                                  onClick={() => setWebsiteConfig({...websiteConfig, heroImage: ''})}
+                                  onClick={() => setWebsiteConfig({
+                                    ...websiteConfig, 
+                                    [websiteSection === 'hero' ? 'heroImage' : 'evalImage']: ''
+                                  })}
                                   className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-all"
                                 >
                                   <Trash2 size={20} />
@@ -949,7 +1138,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                               <ImagePlus size={32} className="text-brand-secondary group-hover:scale-110 transition-transform" />
                             )}
                             <div className="text-center">
-                              <span className="font-bold text-brand-primary block">{uploading ? 'A carregar...' : 'Alterar Imagem de Fundo'}</span>
+                              <span className="font-bold text-brand-primary block">{uploading ? 'A carregar...' : 'Alterar Imagem'}</span>
                               <span className="text-[10px] uppercase tracking-widest mt-1">PNG, JPG ou SVG (Máx 1MB)</span>
                             </div>
                             <input 
@@ -962,10 +1151,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                                 if (!file) return;
                                 setUploading(true);
                                 try {
-                                  const url = await uploadImage(file, `config/hero_${Date.now()}_${file.name}`);
-                                  setWebsiteConfig({...websiteConfig, heroImage: url});
+                                  const url = await uploadImage(file, `config/${websiteSection}_${Date.now()}_${file.name}`);
+                                  setWebsiteConfig({
+                                    ...websiteConfig, 
+                                    [websiteSection === 'hero' ? 'heroImage' : 'evalImage']: url
+                                  });
                                 } catch (err) {
-                                  alert('Erro ao carregar imagem de fundo.');
+                                  alert('Erro ao carregar imagem.');
                                 } finally {
                                   setUploading(false);
                                 }
@@ -1004,53 +1196,252 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                       <Palette className="text-brand-secondary" size={20} />
                       <h3 className="text-white font-serif font-bold">Pré-visualização</h3>
                     </div>
-                    <p className="text-white/60 text-xs leading-relaxed">As alterações feitas aqui serão refletidas instantaneamente na página inicial do site após guardar.</p>
+                    <p className="text-white/60 text-xs leading-relaxed">Pré-visualização da secção que está a editar.</p>
                   </div>
 
-                  <div className="bg-white p-4 shadow-xl border border-gray-100 overflow-hidden">
-                    <div className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-4 border-b border-gray-50 pb-2">Layout do Hero</div>
-                    <div className="relative aspect-video bg-gray-900 overflow-hidden">
-                      {websiteConfig.heroImage ? (
-                        <img src={websiteConfig.heroImage} className="w-full h-full object-cover opacity-60" alt="Preview" />
-                      ) : (
-                        <div className="w-full h-full bg-brand-primary/20 flex items-center justify-center">
-                          <Building2 className="text-white/10" size={64} />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
-                        <h4 className="text-white font-serif font-bold text-lg leading-tight mb-2">
-                          {websiteConfig.heroTitle || 'Título Principal'}
-                        </h4>
-                        <p className="text-white/70 text-[8px] line-clamp-2 px-4 mb-4">
-                          {websiteConfig.heroSubtitle || 'O seu subtítulo aparecerá aqui nesta zona para os utilizadores.'}
-                        </p>
-                        <div className="bg-brand-secondary text-white px-4 py-2 text-[8px] font-bold uppercase tracking-widest">
-                          {websiteConfig.heroButtonText || 'Botão'}
+                  {websiteSection === 'hero' ? (
+                    <div className="bg-white p-4 shadow-xl border border-gray-100 overflow-hidden">
+                      <div className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-4 border-b border-gray-50 pb-2">Layout do Hero</div>
+                      <div className="relative aspect-video bg-gray-900 overflow-hidden">
+                        {(websiteConfig.heroImage || liveConfig.heroImage) ? (
+                          <img src={websiteConfig.heroImage || liveConfig.heroImage} className="w-full h-full object-cover opacity-60" alt="Preview" />
+                        ) : (
+                          <div className="w-full h-full bg-brand-primary/20 flex items-center justify-center">
+                            <Building2 className="text-white/10" size={64} />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center">
+                          <h4 className="text-white font-serif font-bold text-lg leading-tight mb-2">
+                            {websiteConfig.heroTitle || liveConfig.heroTitle || 'Título Hero'}
+                          </h4>
+                          <p className="text-white/70 text-[8px] line-clamp-2 px-4 mb-4">
+                            {websiteConfig.heroSubtitle || liveConfig.heroSubtitle || 'O seu subtítulo aparecerá aqui.'}
+                          </p>
+                          <div className="bg-brand-secondary text-white px-4 py-2 text-[8px] font-bold uppercase tracking-widest">
+                            {websiteConfig.heroButtonText || liveConfig.heroButtonText || 'Botão'}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-white p-4 shadow-xl border border-gray-100 overflow-hidden">
+                      <div className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-4 border-b border-gray-50 pb-2">Layout de Avaliação</div>
+                      <div className="bg-brand-primary p-6 text-center">
+                        <h4 className="text-white font-serif font-bold text-sm mb-4 leading-tight">
+                          {websiteConfig.evalTitle || liveConfig.evalTitle || 'Receba uma avaliação gratuita do seu imóvel em 24h.'}
+                        </h4>
+                        <div className="relative aspect-video bg-gray-800 mb-4 overflow-hidden">
+                           {(websiteConfig.evalImage || liveConfig.evalImage) ? (
+                            <img src={websiteConfig.evalImage || liveConfig.evalImage} className="w-full h-full object-cover" alt="Preview" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center opacity-20">
+                              <ImagePlus className="text-white" size={32} />
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-white/70 text-[8px] line-clamp-3">
+                          {websiteConfig.evalSubtitle || liveConfig.evalSubtitle || 'Sabemos o valor real do seu património...'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-amber-50 p-6 border-l-4 border-amber-400 shadow-lg">
                     <div className="flex items-center gap-3 mb-2">
                       <Settings className="text-amber-600" size={20} />
-                      <h3 className="text-amber-900 font-serif font-bold">Ajuda</h3>
+                      <h3 className="text-amber-900 font-serif font-bold">Dica</h3>
                     </div>
-                    <p className="text-amber-800 text-xs leading-relaxed">Pode restaurar os valores originais se as alterações não forem as pretendidas.</p>
-                    <button 
-                      onClick={() => setWebsiteConfig({
-                        heroTitle: 'Procura casa no Algarve?',
-                        heroSubtitle: '',
-                        heroButtonText: 'Ver seleção',
-                        heroImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=2000'
-                      })}
-                      className="mt-4 flex items-center gap-2 text-amber-900 font-bold text-[10px] uppercase tracking-widest hover:underline"
-                    >
-                      <RotateCcw size={12} /> Restaurar Padrão
-                    </button>
+                    <p className="text-amber-800 text-xs leading-relaxed">Certifique-se de que as imagens têm boa qualidade para manter o aspeto premium do site.</p>
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {sidebarTab === 'clientes' && (
+            <div className="space-y-8">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-serif font-bold text-brand-primary">Gestão de Clientes & Leads</h1>
+                  <p className="text-gray-500 text-sm">Acompanhe os seus contactos e formulários capturados.</p>
+                </div>
+                
+                <div className="flex border-b border-gray-200 bg-white shadow-sm overflow-x-auto">
+                  <button 
+                    onClick={() => setClientesTab('list')}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      clientesTab === 'list' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <Users size={18} /> Lista de Clientes ({clients.length})
+                  </button>
+                  <button 
+                    onClick={() => setClientesTab('add')}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      clientesTab === 'add' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <UserPlus size={18} /> Novo Cliente
+                  </button>
+                  <button 
+                    onClick={() => setClientesTab('leads')}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      clientesTab === 'leads' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <MailIcon size={18} /> Leads do Website ({leads.length})
+                  </button>
+                </div>
+              </div>
+
+              {clientesTab === 'add' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-xl p-8 md:p-12 border border-gray-100 max-w-4xl">
+                   <h2 className="text-2xl font-serif font-bold text-brand-primary mb-2">Adicionar Novo Cliente</h2>
+                   <p className="text-gray-500 text-sm mb-8">Registe um novo cliente na sua base de dados CRM.</p>
+
+                   <form onSubmit={handleAddClient} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Nome</label>
+                        <input type="text" required value={clientFirstName} onChange={e => setClientFirstName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" placeholder="Ex: João" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Sobrenome</label>
+                        <input type="text" required value={clientLastName} onChange={e => setClientLastName(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" placeholder="Ex: Silva" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Telemóvel</label>
+                        <input type="tel" required value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" placeholder="+351 9xx xxx xxx" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Email</label>
+                        <input type="email" required value={clientEmail} onChange={e => setClientEmail(e.target.value)} className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" placeholder="exemplo@email.com" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Interesse Principal</label>
+                        <select required value={clientInterest} onChange={e => setClientInterest(e.target.value as any)} className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm">
+                          <option value="compra">Compra</option>
+                          <option value="venda">Venda</option>
+                          <option value="arrendamento">Arrendamento</option>
+                        </select>
+                      </div>
+                      <div className="md:col-span-2 pt-4">
+                        <button type="submit" disabled={clientSaving} className="bg-brand-primary text-white px-10 py-4 font-bold uppercase tracking-widest text-xs hover:bg-brand-primary/90 transition-all shadow-lg flex items-center gap-2">
+                          {clientSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                          Guardar Cliente
+                        </button>
+                      </div>
+                   </form>
+                </motion.div>
+              )}
+
+              {clientesTab === 'list' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-xl p-8 md:p-12 border border-gray-100">
+                  <div className="mb-8">
+                    <h2 className="text-2xl font-serif font-bold text-brand-primary mb-1">Base de Dados de Clientes</h2>
+                    <p className="text-gray-500 text-sm">Total de {clients.length} registos encontrados.</p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-gray-100">
+                          <th className="py-4 text-[10px] uppercase tracking-widest font-bold text-gray-400 px-4">Nome</th>
+                          <th className="py-4 text-[10px] uppercase tracking-widest font-bold text-gray-400 px-4">Contacto</th>
+                          <th className="py-4 text-[10px] uppercase tracking-widest font-bold text-gray-400 px-4">Interesse</th>
+                          <th className="py-4 text-[10px] uppercase tracking-widest font-bold text-gray-400 px-4">Data Registo</th>
+                          <th className="py-4 text-[10px] uppercase tracking-widest font-bold text-gray-400 px-4 text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clients.length === 0 ? (
+                          <tr><td colSpan={5} className="py-12 text-center text-gray-400 italic">Nenhum cliente registado.</td></tr>
+                        ) : (
+                          clients.map(client => (
+                            <tr key={client.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors group">
+                              <td className="py-5 px-4">
+                                <div className="font-bold text-brand-primary">{client.firstName} {client.lastName}</div>
+                              </td>
+                              <td className="py-5 px-4">
+                                <div className="text-xs text-gray-600">{client.email}</div>
+                                <div className="text-[10px] text-gray-400">{client.phone}</div>
+                              </td>
+                              <td className="py-5 px-4">
+                                <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-1 ${
+                                  client.interest === 'compra' ? 'bg-emerald-100 text-emerald-800' : 
+                                  client.interest === 'venda' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {client.interest}
+                                </span>
+                              </td>
+                              <td className="py-5 px-4 text-xs text-gray-400">
+                                {new Date(client.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="py-5 px-4 text-right">
+                                <button onClick={() => handleDeleteClient(client.id)} className="text-red-300 hover:text-red-600 transition-colors p-2 opacity-0 group-hover:opacity-100">
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </motion.div>
+              )}
+
+              {clientesTab === 'leads' && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white shadow-xl p-8 md:p-12 border border-gray-100">
+                   <div className="mb-8">
+                    <h2 className="text-2xl font-serif font-bold text-brand-primary mb-1">Leads Capturados</h2>
+                    <p className="text-gray-500 text-sm">Formulários preenchidos no website por potenciais clientes.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {leads.length === 0 ? (
+                      <div className="col-span-full py-12 text-center text-gray-400 italic">Nenhum lead capturado até ao momento.</div>
+                    ) : (
+                      leads.map(lead => (
+                        <div key={lead.id} className="bg-gray-50 border border-gray-200 p-6 relative group">
+                           <button onClick={() => handleDeleteLead(lead.id)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors">
+                             <Trash2 size={14} />
+                           </button>
+                           <div className="flex items-center gap-2 mb-4">
+                              <span className={`text-[8px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 ${
+                                lead.type === 'evaluation' ? 'bg-amber-500 text-white' : 
+                                lead.type === 'contact' ? 'bg-brand-primary text-white' : 'bg-gray-500 text-white'
+                              }`}>
+                                {lead.type === 'evaluation' ? 'Avaliação' : lead.type === 'contact' ? 'Contacto' : 'Info'}
+                              </span>
+                              <span className="text-[10px] text-gray-400">{new Date(lead.createdAt).toLocaleDateString()}</span>
+                           </div>
+                           <h3 className="font-bold text-brand-primary mb-1">{lead.name}</h3>
+                           <div className="text-xs text-gray-500 mb-4">{lead.email} • {lead.phone}</div>
+                           
+                           {lead.message && (
+                             <div className="bg-white p-3 border border-gray-100 text-xs text-gray-600 mb-4 italic leading-relaxed">
+                               "{lead.message}"
+                             </div>
+                           )}
+
+                           <div className="space-y-1">
+                             {lead.location && <div className="text-[10px] text-gray-500 uppercase tracking-tighter flex items-center gap-1"><MapPin size={10} /> {lead.location}</div>}
+                             {lead.propertyType && <div className="text-[10px] text-gray-500 uppercase tracking-tighter flex items-center gap-1"><Briefcase size={10} /> {lead.propertyType}</div>}
+                           </div>
+
+                           <div className="mt-6 pt-4 border-t border-gray-200 flex justify-between items-center">
+                              <div className="flex items-center gap-1">
+                                <div className={`w-2 h-2 rounded-full ${lead.status === 'new' ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
+                                <span className="text-[9px] font-bold uppercase text-gray-400 tracking-widest">{lead.status}</span>
+                              </div>
+                              <a href={`mailto:${lead.email}`} className="text-brand-secondary font-bold text-[10px] uppercase tracking-widest hover:underline flex items-center gap-1">Responder <ArrowRight size={10} /></a>
+                           </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+              )}
             </div>
           )}
         </div>

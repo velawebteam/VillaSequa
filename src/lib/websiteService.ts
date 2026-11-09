@@ -6,6 +6,9 @@ export interface WebsiteConfig {
   heroSubtitle?: string;
   heroImage?: string;
   heroButtonText?: string;
+  evalTitle?: string;
+  evalSubtitle?: string;
+  evalImage?: string;
   updatedAt?: string;
 }
 

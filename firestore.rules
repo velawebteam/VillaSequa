@@ -29,10 +29,37 @@ service cloud.firestore {
              data.location is string;
     }
 
+    function isValidClient(data) {
+      return data.keys().hasAll(['id', 'firstName', 'lastName', 'phone', 'email', 'interest']) &&
+             data.firstName is string && data.firstName.size() <= 100 &&
+             data.lastName is string && data.lastName.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.interest in ['compra', 'venda', 'arrendamento'];
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'phone', 'type', 'status']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 100 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.type in ['evaluation', 'contact', 'info'] &&
+             data.status in ['new', 'contacted', 'qualified', 'lost'];
+    }
+
     match /properties/{propertyId} {
       allow get: if (resource == null || existing().visibility == 'visível' || isAdmin());
       allow list: if true; // Allow public listing (filters applied in UI)
       allow write: if isAdmin() && isValidProperty(incoming());
+    }
+
+    match /clients/{clientId} {
+      allow read, write: if isAdmin() && (request.method != 'create' || isValidClient(incoming()));
+    }
+
+    match /leads/{leadId} {
+      allow create: if isValidLead(incoming());
+      allow read, write: if isAdmin();
     }
 
     function isValidConfig(data) {

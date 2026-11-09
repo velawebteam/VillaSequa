@@ -20,6 +20,7 @@ export interface Property {
   features: string[];
   featured?: boolean;
   visibility: 'visível' | 'oculto';
+  category: 'venda' | 'arrendamento' | 'construcao';
   createdAt: string;
   updatedAt: string;
 }
@@ -30,6 +31,31 @@ export interface SearchFilters {
   minPrice?: number;
   maxPrice?: number;
   bedrooms?: number;
+}
+
+export interface Client {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  interest: 'compra' | 'venda' | 'arrendamento';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  message?: string;
+  location?: string;
+  propertyType?: string;
+  type: 'evaluation' | 'contact' | 'info';
+  status: 'new' | 'contacted' | 'qualified' | 'lost';
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type View = 'home' | 'listing' | 'detail' | 'about' | 'services' | 'favorites' | 'contact' | 'sell' | 'admin';

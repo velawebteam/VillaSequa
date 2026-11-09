@@ -37,6 +37,41 @@
         "heroButtonText": { "type": "string", "maxLength": 100 },
         "updatedAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A CRM client",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string", "maxLength": 100 },
+        "lastName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "email": { "type": "string", "maxLength": 100 },
+        "interest": { "type": "string", "enum": ["compra", "venda", "arrendamento"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "firstName", "lastName", "phone", "email", "interest"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "A website lead captured from forms",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "location": { "type": "string", "maxLength": 200 },
+        "propertyType": { "type": "string", "maxLength": 100 },
+        "type": { "type": "string", "enum": ["evaluation", "contact", "info"] },
+        "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "phone", "type", "status"]
     }
   },
   "firestore": {
@@ -47,6 +82,14 @@
     "config/website": {
       "schema": "WebsiteConfig",
       "description": "Global website configuration"
+    },
+    "clients": {
+      "schema": "Client",
+      "description": "CRM Clients"
+    },
+    "leads": {
+      "schema": "Lead",
+      "description": "Captured leads"
     }
   }
 }

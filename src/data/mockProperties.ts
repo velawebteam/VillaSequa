@@ -23,6 +23,7 @@ export const mockProperties: Property[] = [
     features: ['Piscina', 'Jardim', 'Garagem', 'Vista Golfe', 'Domótica'],
     featured: true,
     visibility: 'visível',
+    category: 'venda',
     createdAt: now,
     updatedAt: now
   },
@@ -45,6 +46,7 @@ export const mockProperties: Property[] = [
     features: ['Piscina Comum', 'Terraço', 'Cozinha Equipada', 'Estacionamento'],
     featured: true,
     visibility: 'visível',
+    category: 'venda',
     createdAt: now,
     updatedAt: now
   },
@@ -67,6 +69,7 @@ export const mockProperties: Property[] = [
     features: ['Jacuzzi', 'Ar Condicionado', 'Lareira', 'Arrecadação'],
     featured: true,
     visibility: 'visível',
+    category: 'venda',
     createdAt: now,
     updatedAt: now
   },
@@ -89,6 +92,7 @@ export const mockProperties: Property[] = [
     features: ['Vista Mar', 'Acesso Estrada', 'Zona Calma'],
     featured: false,
     visibility: 'visível',
+    category: 'venda',
     createdAt: now,
     updatedAt: now
   },
@@ -111,6 +115,7 @@ export const mockProperties: Property[] = [
     features: ['Pátio', 'Churrasqueira', 'Centro Histórico'],
     featured: false,
     visibility: 'visível',
+    category: 'venda',
     createdAt: now,
     updatedAt: now
   },
@@ -133,6 +138,7 @@ export const mockProperties: Property[] = [
     features: ['Alarme', 'Extração de Fumos', 'Montra'],
     featured: false,
     visibility: 'visível',
+    category: 'venda',
     createdAt: now,
     updatedAt: now
   }

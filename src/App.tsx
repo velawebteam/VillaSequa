@@ -4,10 +4,10 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Property, View, SearchFilters } from './types';
 import { getFavorites, toggleFavorite } from './lib/favorites';
-import { getPropertiesFromFirestore, seedProperties } from './lib/firestoreService';
+import { getPropertiesFromFirestore, seedProperties, addLeadToFirestore } from './lib/firestoreService';
 import { getWebsiteConfig, WebsiteConfig } from './lib/websiteService';
 import { mockProperties } from './data/mockProperties';
 import { AdminView } from './components/AdminView';
@@ -39,7 +39,7 @@ import CustomCursor from './components/CustomCursor';
 
 // --- Shared Components ---
 
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -384,6 +384,11 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
   const heroSubtitle = config?.heroSubtitle || '';
   const heroImage = config?.heroImage || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=2000';
   const heroButtonText = config?.heroButtonText || 'Ver seleção';
+
+  // Evaluation values
+  const evalTitle = config?.evalTitle || 'Receba uma avaliação gratuita do seu imóvel em 24h.';
+  const evalSubtitle = config?.evalSubtitle || 'Sabemos o valor real do seu património. Utilizamos dados atualizados de mercado e a nossa vasta experiência local para garantir o melhor preço na venda.';
+  const evalImage = config?.evalImage || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=1000';
   
   return (
     <div className="overflow-x-hidden">
@@ -621,10 +626,10 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
             >
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Vender o seu imóvel?</span>
               <h2 className="text-4xl md:text-6xl font-serif font-bold text-white mb-8 leading-tight tracking-tight">
-                Receba uma avaliação <span className="text-brand-secondary italic">gratuita</span> do seu imóvel em 24h.
+                {evalTitle}
               </h2>
               <p className="text-white/80 text-lg mb-10 leading-relaxed font-light">
-                Sabemos o valor real do seu património. Utilizamos dados atualizados de mercado e a nossa vasta experiência local para garantir o melhor preço na venda.
+                {evalSubtitle}
               </p>
               <ul className="space-y-6 mb-12">
                 {[
@@ -665,7 +670,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
                 className="relative z-10 rounded-none overflow-hidden shadow-2xl aspect-[4/5]"
               >
                 <img 
-                  src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=1000" 
+                  src={evalImage} 
                   alt="Serviço Premium"
                   className="w-full h-full object-cover"
                 />
@@ -742,6 +747,40 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
 const SellView = () => {
   const { scrollY } = useScroll();
   const heroY = useTransform(scrollY, [0, 500], [0, 150]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    propertyType: 'Moradia',
+    message: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await addLeadToFirestore({
+        ...formData,
+        type: 'evaluation',
+        status: 'new'
+      });
+      alert('Pedido de avaliação enviado com sucesso! A nossa equipa entrará em contacto em breve.');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        location: '',
+        propertyType: 'Moradia',
+        message: ''
+      });
+    } catch (error) {
+      alert('Erro ao enviar pedido. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -785,29 +824,61 @@ const SellView = () => {
               <p className="text-brand-muted">Preencha os dados abaixo e a nossa equipa entrará em contacto consigo em menos de 24 horas.</p>
             </div>
 
-            <form className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <form className="grid grid-cols-1 md:grid-cols-2 gap-8" onSubmit={handleSubmit}>
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Nome Completo</label>
-                  <input type="text" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="Seu nome..." />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" 
+                    placeholder="Seu nome..." 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">E-mail de Contacto</label>
-                  <input type="email" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="exemplo@email.com" />
+                  <input 
+                    type="email" 
+                    required 
+                    className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" 
+                    placeholder="exemplo@email.com" 
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Telemóvel</label>
-                  <input type="tel" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="+351 9xx xxx xxx" />
+                  <input 
+                    type="tel" 
+                    required 
+                    className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" 
+                    placeholder="+351 9xx xxx xxx" 
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="space-y-6">
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Localização do Imóvel</label>
-                  <input type="text" required className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" placeholder="Concelho, Freguesia..." />
+                  <input 
+                    type="text" 
+                    required 
+                    className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all" 
+                    placeholder="Concelho, Freguesia..." 
+                    value={formData.location}
+                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Tipo de Imóvel</label>
-                  <select className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all appearance-none cursor-pointer">
+                  <select 
+                    className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all appearance-none cursor-pointer"
+                    value={formData.propertyType}
+                    onChange={(e) => setFormData({...formData, propertyType: e.target.value})}
+                  >
                     <option>Moradia</option>
                     <option>Apartamento</option>
                     <option>Terreno</option>
@@ -816,16 +887,22 @@ const SellView = () => {
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary mb-2 block">Mensagem Adicional (Opcional)</label>
-                  <textarea className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all resize-none h-14" placeholder="Algum detalhe importante?"></textarea>
+                  <textarea 
+                    className="w-full bg-gray-50 border border-transparent p-4 outline-none focus:border-brand-secondary transition-all resize-none h-14" 
+                    placeholder="Algum detalhe importante?"
+                    value={formData.message}
+                    onChange={(e) => setFormData({...formData, message: e.target.value})}
+                  ></textarea>
                 </div>
               </div>
               <div className="md:col-span-2 mt-4">
                 <motion.button 
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-brand-primary text-white py-6 font-bold uppercase tracking-[0.2em] text-sm shadow-xl hover:bg-brand-secondary transition-all"
+                  disabled={isSubmitting}
+                  className={`w-full bg-brand-primary text-white py-6 font-bold uppercase tracking-[0.2em] text-sm shadow-xl hover:bg-brand-secondary transition-all ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  Enviar Pedido de Avaliação
+                  {isSubmitting ? 'Enviando...' : 'Enviar Pedido de Avaliação'}
                 </motion.button>
               </div>
             </form>
@@ -879,8 +956,100 @@ const SellView = () => {
   );
 };
 
+function AppContent({ 
+  favorites, 
+  allProperties, 
+  websiteConfig, 
+  setPropertiesVersion, 
+  handleSelectProperty, 
+  selectedProperty,
+  handleToggleFavorite, 
+  searchFilters 
+}: {
+  favorites: string[],
+  allProperties: Property[],
+  websiteConfig: WebsiteConfig | undefined,
+  setPropertiesVersion: React.Dispatch<React.SetStateAction<number>>,
+  handleSelectProperty: (p: Property) => void,
+  selectedProperty: Property | null,
+  handleToggleFavorite: (id: string) => void,
+  searchFilters: SearchFilters
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAdmin = location.pathname.startsWith('/admin');
+
+  const handleViewChange = (v: View) => {
+    if (v === 'home') navigate('/');
+    else if (v === 'listing') navigate('/listing');
+    else if (v === 'admin') navigate('/admin');
+    else if (v === 'sell') navigate('/sell');
+    else if (v === 'services') navigate('/services');
+    else if (v === 'about') navigate('/about');
+    else if (v === 'contact') navigate('/contact');
+    else if (v === 'favorites') navigate('/favorites');
+    else if (v === 'detail') navigate('/detail');
+  };
+
+  const onSelectProperty = (p: Property) => {
+    handleSelectProperty(p);
+    navigate('/detail');
+  };
+
+  return (
+    <div className={`min-h-screen ${isAdmin ? 'bg-gray-100' : 'bg-white selection:bg-brand-secondary/30 custom-cursor-active'}`}>
+      {!isAdmin && <CustomCursor />}
+      {!isAdmin && (
+        <Navbar 
+          favoritesCount={favorites.length}
+        />
+      )}
+      
+      <Routes>
+        <Route path="/" element={<HomeView 
+          properties={allProperties}
+          onSelectProperty={onSelectProperty} 
+          onViewChange={handleViewChange} 
+          onToggleFavorite={handleToggleFavorite} 
+          favorites={favorites} 
+          config={websiteConfig}
+        />} />
+        <Route path="/listing" element={<ListingView 
+          properties={allProperties}
+          onSelectProperty={onSelectProperty} 
+          onToggleFavorite={handleToggleFavorite} 
+          favorites={favorites} 
+          initialFilters={searchFilters} 
+        />} />
+        <Route path="/admin" element={<AdminView 
+          onViewChange={handleViewChange} 
+          onPropertiesChange={() => setPropertiesVersion(v => v + 1)} 
+        />} />
+        <Route path="/sell" element={<SellView />} />
+        <Route path="/services" element={<ServicesView onViewChange={handleViewChange} />} />
+        <Route path="/about" element={<AboutView onViewChange={handleViewChange} />} />
+        <Route path="/contact" element={<ContactView properties={allProperties} />} />
+        <Route path="/favorites" element={<FavoritesView 
+          properties={allProperties}
+          onSelectProperty={onSelectProperty} 
+          onToggleFavorite={handleToggleFavorite} 
+          favorites={favorites} 
+          onViewChange={handleViewChange} 
+        />} />
+        <Route path="/detail" element={selectedProperty ? <DetailView 
+          property={selectedProperty}
+          onToggleFavorite={handleToggleFavorite}
+          isFav={favorites.includes(selectedProperty.id)}
+          onViewChange={handleViewChange}
+        /> : <Navigate to="/listing" />} />
+      </Routes>
+      
+      {!isAdmin && <Footer onViewChange={handleViewChange} />}
+    </div>
+  );
+}
+
 export default function App() {
-  const [currentView, setCurrentView] = useState<View>('home');
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({});
@@ -888,7 +1057,7 @@ export default function App() {
   useEffect(() => {
     setFavorites(getFavorites());
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentView, selectedProperty]);
+  }, [selectedProperty]);
 
   const handleToggleFavorite = (id: string) => {
     const newFavs = toggleFavorite(id);
@@ -897,7 +1066,6 @@ export default function App() {
 
   const handleSelectProperty = (p: Property) => {
     setSelectedProperty(p);
-    setCurrentView('detail');
   };
 
   // Smooth Scroll Initialization
@@ -921,93 +1089,38 @@ export default function App() {
 
   const [propertiesVersion, setPropertiesVersion] = useState(0);
   const [allProperties, setAllProperties] = useState<Property[]>([]);
-  const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>({});
+  const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig | undefined>(undefined);
 
   useEffect(() => {
     const fetchData = async () => {
-      await seedProperties(mockProperties);
       const [props, config] = await Promise.all([
         getPropertiesFromFirestore(),
         getWebsiteConfig()
       ]);
-      setAllProperties(props);
+      if (props.length === 0) {
+        await seedProperties(mockProperties);
+        const freshProps = await getPropertiesFromFirestore();
+        setAllProperties(freshProps);
+      } else {
+        setAllProperties(props);
+      }
       setWebsiteConfig(config);
     };
     fetchData();
   }, [propertiesVersion]);
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash === 'admin' || window.location.pathname === '/admin') {
-        setCurrentView('admin');
-      }
-    };
-
-    if (window.location.pathname === '/admin' || window.location.hash === '#admin') {
-      setCurrentView('admin');
-    }
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-
-  const handleViewChange = (v: View) => {
-    if (v === 'admin') {
-      window.location.hash = 'admin';
-    } else {
-      if (window.location.hash === '#admin') {
-        window.location.hash = '';
-      }
-    }
-    setCurrentView(v);
-    setSelectedProperty(null);
-  };
-
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-white selection:bg-brand-secondary/30 md:cursor-none">
-        <CustomCursor />
-        {/* Navbar needs to be updated to use Link instead of onViewChange */}
-        <Navbar 
-          favoritesCount={favorites.length}
-        />
-        
-        <Routes>
-          <Route path="/" element={<HomeView 
-            properties={allProperties}
-            onSelectProperty={handleSelectProperty} 
-            onViewChange={handleViewChange} 
-            onToggleFavorite={handleToggleFavorite} 
-            favorites={favorites} 
-            config={websiteConfig}
-          />} />
-          <Route path="/listing" element={<ListingView 
-            properties={allProperties}
-            onSelectProperty={handleSelectProperty} 
-            onToggleFavorite={handleToggleFavorite} 
-            favorites={favorites} 
-            initialFilters={searchFilters} 
-          />} />
-          <Route path="/admin" element={<AdminView 
-            onViewChange={handleViewChange} 
-            onPropertiesChange={() => setPropertiesVersion(v => v + 1)} 
-          />} />
-          <Route path="/sell" element={<SellView />} />
-          <Route path="/services" element={<ServicesView onViewChange={handleViewChange} />} />
-          <Route path="/about" element={<AboutView onViewChange={handleViewChange} />} />
-          <Route path="/contact" element={<ContactView properties={allProperties} />} />
-          <Route path="/favorites" element={<FavoritesView 
-            properties={allProperties}
-            onSelectProperty={handleSelectProperty} 
-            onToggleFavorite={handleToggleFavorite} 
-            favorites={favorites} 
-            onViewChange={handleViewChange} 
-          />} />
-        </Routes>
-        
-        <Footer onViewChange={handleViewChange} />
-      </div>
+      <AppContent 
+        favorites={favorites}
+        allProperties={allProperties}
+        websiteConfig={websiteConfig}
+        setPropertiesVersion={setPropertiesVersion}
+        handleSelectProperty={handleSelectProperty}
+        selectedProperty={selectedProperty}
+        handleToggleFavorite={handleToggleFavorite}
+        searchFilters={searchFilters}
+      />
     </BrowserRouter>
   );
 }
@@ -1101,6 +1214,38 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
   isFav: boolean,
   onViewChange: (v: View) => void
 }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    message: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await addLeadToFirestore({
+        ...formData,
+        message: `[Interesse no imóvel: ${property.title} (#${property.id})] ${formData.message}`,
+        type: 'info',
+        status: 'new'
+      });
+      alert('Mensagem enviada com sucesso! A nossa equipa entrará em contacto brevemente.');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        message: ''
+      });
+    } catch (error) {
+      alert('Erro ao enviar mensagem. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1125,7 +1270,7 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 mb-12 border-b border-gray-100 pb-12">
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-brand-primary mb-4 leading-tight">
-                  {property.title}
+                   {property.title}
                 </h1>
                 <div className="flex items-center text-brand-muted text-sm uppercase tracking-widest font-bold">
                   <MapPin size={16} className="mr-2 text-brand-secondary" />
@@ -1186,10 +1331,7 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
               <div className="bg-brand-primary p-8 md:p-12 rounded-none text-white shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-secondary/10 -translate-y-1/2 translate-x-1/2 rotate-45" />
                 <h3 className="text-3xl font-serif font-bold mb-8 relative z-10">Solicitar Informações</h3>
-                <form className="space-y-6 relative z-10" onSubmit={(e) => {
-                  e.preventDefault();
-                  alert('Mensagem enviada com sucesso! A nossa equipa entrará em contacto brevemente.');
-                }}>
+                <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
                   <div>
                     <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-2 block">Imóvel de Interesse</label>
                     <input 
@@ -1204,6 +1346,8 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
                       type="text" 
                       placeholder="Nome Completo" 
                       required
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
                       className="w-full bg-white/10 border border-white/20 rounded-none p-4 placeholder:text-gray-400 outline-none focus:border-brand-secondary transition-all"
                     />
                   </div>
@@ -1212,6 +1356,8 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
                       type="email" 
                       placeholder="Email" 
                       required
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
                       className="w-full bg-white/10 border border-white/20 rounded-none p-4 placeholder:text-gray-400 outline-none focus:border-brand-secondary transition-all"
                     />
                   </div>
@@ -1220,6 +1366,8 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
                       type="tel" 
                       placeholder="Telefone" 
                       required
+                      value={formData.phone}
+                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
                       className="w-full bg-white/10 border border-white/20 rounded-none p-4 placeholder:text-gray-400 outline-none focus:border-brand-secondary transition-all"
                     />
                   </div>
@@ -1227,11 +1375,16 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
                     <textarea 
                       rows={4}
                       placeholder="Tenho interesse neste imóvel..." 
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
                       className="w-full bg-white/10 border border-white/20 rounded-none p-4 placeholder:text-gray-400 outline-none focus:border-brand-secondary transition-all resize-none"
                     />
                   </div>
-                  <button className="w-full bg-brand-secondary text-white py-5 rounded-none font-bold text-lg hover:shadow-xl hover:shadow-brand-secondary/20 transition-all flex items-center justify-center gap-2">
-                    Marcar Visita <ChevronRight size={20} />
+                  <button 
+                    disabled={isSubmitting}
+                    className={`w-full bg-brand-secondary text-white py-5 rounded-none font-bold text-lg hover:shadow-xl hover:shadow-brand-secondary/20 transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  >
+                    {isSubmitting ? 'Enviando...' : 'Marcar Visita'} <ChevronRight size={20} />
                   </button>
                   <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest leading-loose">
                     Ao enviar, concorda com a nossa política de privacidade.
@@ -1317,6 +1470,44 @@ const FavoritesView = ({ properties, onSelectProperty, onToggleFavorite, favorit
 };
 
 const ContactView = ({ properties }: { properties: Property[] }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: 'Informações Gerais',
+    propertyInterest: '',
+    message: ''
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await addLeadToFirestore({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        message: `[Assunto: ${formData.subject}] ${formData.propertyInterest ? `[Interesse: ${formData.propertyInterest}] ` : ''}${formData.message}`,
+        type: 'contact',
+        status: 'new'
+      });
+      alert('Obrigado pelo seu contacto! Responderemos com a maior brevidade possível.');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: 'Informações Gerais',
+        propertyInterest: '',
+        message: ''
+      });
+    } catch (error) {
+      alert('Erro ao enviar mensagem. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1386,23 +1577,49 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
           <div className="bg-white p-8 md:p-16 border border-gray-100 shadow-2xl rounded-none w-full max-w-4xl">
             <div className="text-center max-w-2xl mx-auto">
               <h3 className="text-2xl font-serif font-bold text-brand-primary mb-8">Envie uma Mensagem</h3>
-              <form className="space-y-6 text-left" onSubmit={(e) => {
-              e.preventDefault();
-              alert('Obrigado pelo seu contacto! Responderemos com a maior brevidade possível.');
-            }}>
+              <form className="space-y-6 text-left" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-muted mb-2 block">Nome</label>
-                  <input type="text" placeholder="O seu nome" required className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all" />
+                  <input 
+                    type="text" 
+                    placeholder="O seu nome" 
+                    required 
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all" 
+                  />
                 </div>
                 <div>
                   <label className="text-[10px] uppercase tracking-widest font-bold text-brand-muted mb-2 block">Email</label>
-                  <input type="email" placeholder="seu@email.com" required className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all" />
+                  <input 
+                    type="email" 
+                    placeholder="seu@email.com" 
+                    required 
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all" 
+                  />
                 </div>
               </div>
               <div>
+                <label className="text-[10px] uppercase tracking-widest font-bold text-brand-muted mb-2 block">Telefone</label>
+                <input 
+                  type="tel" 
+                  placeholder="+351 9xx xxx xxx" 
+                  required 
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all" 
+                />
+              </div>
+              <div>
                 <label className="text-[10px] uppercase tracking-widest font-bold text-brand-muted mb-2 block">Assunto</label>
-                <select className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all cursor-pointer appearance-none">
+                <select 
+                  className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all cursor-pointer appearance-none"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({...formData, subject: e.target.value})}
+                >
                   <option>Informações Gerais</option>
                   <option>Agendar Visita</option>
                   <option>Avaliação de Imóvel</option>
@@ -1412,7 +1629,11 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
               <div>
                 <label className="text-[10px] uppercase tracking-widest font-bold text-brand-muted mb-2 block">Imóvel de Interesse (Opcional)</label>
                 <div className="relative">
-                  <select className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all cursor-pointer appearance-none text-brand-primary">
+                  <select 
+                    className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all cursor-pointer appearance-none text-brand-primary"
+                    value={formData.propertyInterest}
+                    onChange={(e) => setFormData({...formData, propertyInterest: e.target.value})}
+                  >
                     <option value="">Selecione um imóvel...</option>
                     {properties.map(p => (
                       <option key={p.id} value={p.title}>{p.title} - {p.price.toLocaleString('pt-PT')} €</option>
@@ -1425,14 +1646,22 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
               </div>
               <div>
                 <label className="text-[10px] uppercase tracking-widest font-bold text-brand-muted mb-2 block">Mensagem</label>
-                <textarea rows={6} placeholder="Como podemos ajudar?" required className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all resize-none"></textarea>
+                <textarea 
+                  rows={6} 
+                  placeholder="Como podemos ajudar?" 
+                  required 
+                  value={formData.message}
+                  onChange={(e) => setFormData({...formData, message: e.target.value})}
+                  className="w-full bg-gray-50 border border-transparent p-4 rounded-none outline-none focus:border-brand-secondary transition-all resize-none"
+                ></textarea>
               </div>
               <motion.button 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-brand-primary text-white py-5 rounded-none font-bold text-sm uppercase tracking-[0.2em] hover:bg-brand-secondary transition-all shadow-lg"
+                disabled={isSubmitting}
+                className={`w-full bg-brand-primary text-white py-5 rounded-none font-bold text-sm uppercase tracking-[0.2em] hover:bg-brand-secondary transition-all shadow-lg ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                Enviar Mensagem
+                {isSubmitting ? 'Enviando...' : 'Enviar Mensagem'}
               </motion.button>
             </form>
           </div>

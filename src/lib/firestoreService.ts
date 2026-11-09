@@ -80,6 +80,7 @@ export const addPropertyToFirestore = async (property: Partial<Property>): Promi
     images: property.images || [],
     features: property.features || [],
     featured: property.featured || false,
+    category: property.category || 'venda',
     createdAt: now,
     updatedAt: now,
   };
@@ -136,4 +137,106 @@ export const seedProperties = async (mockProperties: Property[]): Promise<void> 
   });
   await Promise.all(savePromises);
   console.log("Seeding complete.");
+};
+
+// --- CLIENTS ---
+import { Client, Lead } from '../types';
+
+const CLIENTS_COLLECTION = 'clients';
+
+export const getClientsFromFirestore = async (): Promise<Client[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, CLIENTS_COLLECTION));
+    const clients: Client[] = [];
+    querySnapshot.forEach((doc) => {
+      clients.push({ id: doc.id, ...doc.data() } as Client);
+    });
+    return clients;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, CLIENTS_COLLECTION);
+    return [];
+  }
+};
+
+export const addClientToFirestore = async (client: Partial<Client>): Promise<Client> => {
+  const now = new Date().toISOString();
+  const id = Date.now().toString();
+  const newClient: Client = {
+    id,
+    firstName: client.firstName || '',
+    lastName: client.lastName || '',
+    phone: client.phone || '',
+    email: client.email || '',
+    interest: client.interest || 'compra',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    await setDoc(doc(db, CLIENTS_COLLECTION, id), newClient);
+    return newClient;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `${CLIENTS_COLLECTION}/${id}`);
+    throw error;
+  }
+};
+
+export const deleteClientFromFirestore = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, CLIENTS_COLLECTION, id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${CLIENTS_COLLECTION}/${id}`);
+  }
+};
+
+// --- LEADS ---
+
+const LEADS_COLLECTION = 'leads';
+
+export const getLeadsFromFirestore = async (): Promise<Lead[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, LEADS_COLLECTION));
+    const leads: Lead[] = [];
+    querySnapshot.forEach((doc) => {
+      leads.push({ id: doc.id, ...doc.data() } as Lead);
+    });
+    return leads;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, LEADS_COLLECTION);
+    return [];
+  }
+};
+
+export const addLeadToFirestore = async (lead: Partial<Lead>): Promise<Lead> => {
+  const now = new Date().toISOString();
+  const id = Date.now().toString();
+  const newLead: Lead = {
+    id,
+    name: lead.name || '',
+    email: lead.email || '',
+    phone: lead.phone || '',
+    message: lead.message || '',
+    location: lead.location || '',
+    propertyType: lead.propertyType || '',
+    type: lead.type || 'info',
+    status: lead.status || 'new',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  try {
+    await setDoc(doc(db, LEADS_COLLECTION, id), newLead);
+    return newLead;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, `${LEADS_COLLECTION}/${id}`);
+    throw error;
+  }
+};
+
+export const deleteLeadFromFirestore = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, LEADS_COLLECTION, id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, `${LEADS_COLLECTION}/${id}`);
+  }
 };
