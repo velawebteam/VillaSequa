@@ -15,18 +15,17 @@ service cloud.firestore {
     }
 
     // Since we are using hardcoded credentials 'imo'/'12345' in the UI for admin,
-    // and haven't implemented Firebase Auth yet, we will allow all writes for now.
-    // IN PRODUCTION: This should be restricted to authenticated admins.
+    // we will allow all admin operations for now.
+    // IN PRODUCTION: This should be restricted to authenticated admins via Firebase Auth.
     function isAdmin() {
       return true; // Temporary placeholder until Firebase Auth is integrated
     }
 
     function isValidProperty(data) {
-      // Basic mandatory field check
-      return data.keys().hasAll(['id', 'title', 'price', 'location', 'type', 'status', 'visibility']) &&
-             data.title is string && 
+      return data.keys().hasAll(['id', 'title', 'price', 'location', 'type', 'status', 'visibility', 'category', 'reference']) &&
+             data.title is string && data.title.size() <= 200 &&
              data.price is number &&
-             data.location is string;
+             data.location is string && data.location.size() <= 200;
     }
 
     function isValidClient(data) {
@@ -43,13 +42,27 @@ service cloud.firestore {
              data.name is string && data.name.size() <= 200 &&
              data.email is string && data.email.size() <= 100 &&
              data.phone is string && data.phone.size() <= 20 &&
-             data.type in ['evaluation', 'contact', 'info'] &&
+             data.type in ['evaluation', 'contact', 'info', 'newsletter'] &&
              data.status in ['new', 'contacted', 'qualified', 'lost'];
+    }
+
+    function isValidNewsletterTemplate(data) {
+      return data.keys().hasAll(['id', 'name', 'content']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.content is string && data.content.size() <= 50000;
+    }
+
+    function isValidSentNewsletter(data) {
+      return data.keys().hasAll(['templateId', 'propertyIds', 'recipientEmails', 'sentAt']) &&
+             data.templateId is string &&
+             data.propertyIds is list &&
+             data.recipientEmails is list &&
+             data.sentAt is string;
     }
 
     match /properties/{propertyId} {
       allow get: if (resource == null || existing().visibility == 'visível' || isAdmin());
-      allow list: if true; // Allow public listing (filters applied in UI)
+      allow list: if true; 
       allow write: if isAdmin() && isValidProperty(incoming());
     }
 
@@ -62,20 +75,28 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    function isValidConfig(data) {
-      // Allow any config fields for now to prevent blockages during UI development
-      return true;
+    match /newsletter_templates/{templateId} {
+      allow read, write: if isAdmin() && (request.method != 'create' || isValidNewsletterTemplate(incoming()));
+    }
+
+    match /sent_newsletters/{newsletterId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && isValidSentNewsletter(incoming());
     }
 
     match /config/website {
       allow get: if true;
-      allow write: if isAdmin() && isValidConfig(incoming());
+      allow write: if isAdmin();
     }
     
-    // Generic match for any other config
     match /config/{document} {
       allow get: if true;
       allow write: if isAdmin();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Property, View, PROPERTY_FEATURES, ENERGY_RATES } from '../types';
+import { Property, View, NewsletterTemplate, PROPERTY_FEATURES, ENERGY_RATES } from '../types';
 import { getProperties, addProperty, deleteProperty, deleteAllProperties, toggleFeaturedProperty, parsePropertiesXml, saveProperties, exportPropertiesToXml } from '../lib/propertyStore';
 import { mockProperties } from '../data/mockProperties';
 import { 
@@ -37,6 +37,15 @@ import { Client, Lead } from '../types';
 import { uploadImage } from '../lib/storageService';
 import { getWebsiteConfig, updateWebsiteConfig, WebsiteConfig } from '../lib/websiteService';
 import { 
+  getTemplates, 
+  addTemplate, 
+  updateTemplate, 
+  deleteTemplate, 
+  logSentNewsletter 
+} from '../lib/newsletterService';
+
+
+import { 
   Type, 
   Settings, 
   Layout, 
@@ -70,7 +79,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState(false);
 
-  const [sidebarTab, setSidebarTab] = useState<'imoveis' | 'website' | 'clientes' | 'leads' | 'matching'>('imoveis');
+  const [sidebarTab, setSidebarTab] = useState<'imoveis' | 'website' | 'clientes' | 'leads' | 'matching' | 'newsletter'>('imoveis');
   const [activeTab, setActiveTab] = useState<'add' | 'list' | 'sync' | 'export' | 'edit' | 'venda' | 'arrendamento' | 'construcao' | 'rascunho' | 'xml'>('add');
   const [prevTab, setPrevTab] = useState<typeof activeTab>('list');
   const [xmlSubTab, setXmlSubTab] = useState<'import' | 'export'>('import');
@@ -78,11 +87,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const [websitePage, setWebsitePage] = useState<'home' | 'about' | 'services' | 'contact'>('home');
   const [websiteSection, setWebsiteSection] = useState<string>('hero');
   const [previewMode, setPreviewMode] = useState<'editor' | 'split'>('split');
-  const [leadsSubTab, setLeadsSubTab] = useState<'info' | 'evaluation' | 'contact'>('info');
+  const [leadsSubTab, setLeadsSubTab] = useState<'info' | 'evaluation' | 'contact' | 'newsletter'>('info');
   const [properties, setProperties] = useState<Property[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [templates, setTemplates] = useState<NewsletterTemplate[]>([]);
   const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+  const [newsletterTab, setNewsletterTab] = useState<'create' | 'list' | 'send'>('list');
+  const [editingTemplate, setEditingTemplate] = useState<NewsletterTemplate | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateSubject, setTemplateSubject] = useState('');
+  const [templatePreheader, setTemplatePreheader] = useState('');
+  const [templateContent, setTemplateContent] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [selectedPropIds, setSelectedPropIds] = useState<string[]>([]);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<NewsletterTemplate | null>(null);
+
+
 
   // Website Config State
   const [websiteConfig, setWebsiteConfig] = useState<WebsiteConfig>({});
@@ -204,17 +227,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (username === 'imo' && password === '12345') {
-      const [allProps, config, allClients, allLeads] = await Promise.all([
+      const [allProps, config, allClients, allLeads, allTemplates] = await Promise.all([
         getPropertiesFromFirestore(),
         getWebsiteConfig(),
         getClientsFromFirestore(),
-        getLeadsFromFirestore()
+        getLeadsFromFirestore(),
+        getTemplates()
       ]);
       setProperties(allProps);
       setWebsiteConfig({}); // Start with empty fields for "changes"
       setLiveConfig(config);
       setClients(allClients);
       setLeads(allLeads);
+      setTemplates(allTemplates);
+
       setIsLoggedIn(true);
       setLoginError(false);
     } else {
@@ -469,6 +495,75 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
     }
   };
 
+  const handleSaveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingTemplate) {
+        await updateTemplate(editingTemplate.id, {
+          name: templateName,
+          subject: templateSubject,
+          preheader: templatePreheader,
+          content: templateContent
+        });
+        alert('Modelo atualizado com sucesso!');
+      } else {
+        await addTemplate({
+          name: templateName,
+          subject: templateSubject,
+          preheader: templatePreheader,
+          content: templateContent
+        });
+        alert('Modelo criado com sucesso!');
+      }
+      const allTemplates = await getTemplates();
+      setTemplates(allTemplates);
+      setEditingTemplate(null);
+      setTemplateName('');
+      setTemplateSubject('');
+      setTemplatePreheader('');
+      setTemplateContent('');
+    } catch (err) {
+      alert('Erro ao guardar modelo.');
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (window.confirm('Eliminar este modelo permanentemente?')) {
+      await deleteTemplate(id);
+      const allTemplates = await getTemplates();
+      setTemplates(allTemplates);
+    }
+  };
+
+  const handleSendNewsletter = async () => {
+    if (!selectedTemplateId) return alert('Selecione um modelo.');
+    if (selectedLeadIds.length === 0) return alert('Selecione pelo menos um destinatário.');
+    
+    setIsSending(true);
+    try {
+      const recipientEmails = leads
+        .filter(l => selectedLeadIds.includes(l.id))
+        .map(l => l.email);
+
+      await logSentNewsletter({
+        templateId: selectedTemplateId,
+        propertyIds: selectedPropIds,
+        recipientEmails
+      });
+
+      alert(`Newsletter enviada com sucesso para ${recipientEmails.length} contactos!`);
+      setSelectedPropIds([]);
+      setSelectedLeadIds([]);
+      setSelectedTemplateId('');
+      setNewsletterTab('templates');
+    } catch (err) {
+      alert('Erro ao enviar newsletter.');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
@@ -593,6 +688,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
             <Star size={18} /> Matching
           </button>
 
+          <button 
+            onClick={() => setSidebarTab('newsletter')}
+            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all rounded-none ${sidebarTab === 'newsletter' ? 'bg-brand-secondary text-white shadow-lg' : 'hover:bg-white/5 text-white/70'}`}
+          >
+            <MailIcon size={18} /> Newsletter
+          </button>
+
+
           <div className="pt-6 pb-2 text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold px-4">Sistema</div>
           
           <button 
@@ -602,12 +705,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
             <ExternalLink size={18} /> Sair do BackOffice
           </button>
 
-          <button 
-            onClick={() => setIsLoggedIn(false)}
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-all text-red-300 hover:bg-red-500/10"
-          >
-            <LogOut size={18} /> Sair
-          </button>
+
         </nav>
 
         <div className="p-6 border-t border-white/10 bg-black/10">
@@ -1918,6 +2016,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                   >
                     <MailIcon size={18} /> Contactos Gerais ({leads.filter(l => l.type === 'contact').length})
                   </button>
+                  <button 
+                    onClick={() => setLeadsSubTab('newsletter')}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      leadsSubTab === 'newsletter' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <MailIcon size={18} /> Newsletter ({leads.filter(l => l.type === 'newsletter').length})
+                  </button>
                 </div>
               </div>
 
@@ -1933,9 +2039,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
                        <div className="flex items-center gap-2 mb-4">
                           <span className={`text-[8px] font-bold uppercase tracking-[0.2em] px-2 py-0.5 ${
                             lead.type === 'evaluation' ? 'bg-amber-500 text-white' : 
-                            lead.type === 'contact' ? 'bg-brand-primary text-white' : 'bg-gray-500 text-white'
+                            lead.type === 'contact' ? 'bg-brand-primary text-white' : 
+                            lead.type === 'newsletter' ? 'bg-emerald-500 text-white' : 'bg-gray-500 text-white'
                           }`}>
-                            {lead.type === 'evaluation' ? 'Avaliação' : lead.type === 'contact' ? 'Contacto' : 'Info'}
+                            {lead.type === 'evaluation' ? 'Avaliação' : lead.type === 'contact' ? 'Contacto' : lead.type === 'newsletter' ? 'Newsletter' : 'Info'}
                           </span>
                           <span className="text-[10px] text-gray-400">{new Date(lead.createdAt).toLocaleDateString()}</span>
                        </div>
@@ -2049,8 +2156,397 @@ export const AdminView: React.FC<AdminViewProps> = ({ onViewChange, onProperties
               </div>
             </div>
           )}
+
+          {sidebarTab === 'newsletter' && (
+            <div className="space-y-8">
+              <div className="flex flex-col gap-4">
+                <div>
+                  <h1 className="text-3xl font-serif font-bold text-brand-primary">Gestão de Newsletters</h1>
+                  <p className="text-gray-500 text-sm">Crie modelos e envie novidades para os seus subscritores.</p>
+                </div>
+
+                <div className="flex border-b border-gray-200 bg-white shadow-sm overflow-x-auto">
+                  <button 
+                    onClick={() => {
+                      setNewsletterTab('create');
+                      setEditingTemplate(null);
+                      setTemplateName('');
+                      setTemplateSubject('');
+                      setTemplatePreheader('');
+                      setTemplateContent('');
+                    }}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      newsletterTab === 'create' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <PlusCircle size={18} /> Novo Modelo
+                  </button>
+                  <button 
+                    onClick={() => setNewsletterTab('list')}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      newsletterTab === 'list' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <Layout size={18} /> Modelos Guardados ({templates.length})
+                  </button>
+                  <button 
+                    onClick={() => setNewsletterTab('send')}
+                    className={`flex items-center gap-2 px-8 py-4 font-bold text-xs uppercase tracking-widest border-b-2 transition-all whitespace-nowrap ${
+                      newsletterTab === 'send' ? 'border-brand-primary text-brand-primary bg-gray-50' : 'border-transparent text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    <MailIcon size={18} /> Enviar Newsletter
+                  </button>
+                </div>
+
+              </div>
+
+              {newsletterTab === 'create' && (
+                <div className="max-w-4xl mx-auto">
+                  <div className="bg-white p-8 border border-gray-200 shadow-sm">
+                    <h2 className="text-lg font-serif font-bold text-brand-primary mb-6">
+                      {editingTemplate ? 'Editar Modelo' : 'Criar Novo Modelo'}
+                    </h2>
+                    <form onSubmit={async (e) => {
+                      await handleSaveTemplate(e);
+                      setNewsletterTab('list');
+                    }} className="space-y-6">
+                      <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Nome Interno (Ex: Promoção Agosto)</label>
+                        <input 
+                          type="text" 
+                          required 
+                          value={templateName} 
+                          onChange={e => setTemplateName(e.target.value)} 
+                          className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" 
+                          placeholder="Nome para sua organização..." 
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Assunto do Email (O que o cliente vê)</label>
+                          <input 
+                            type="text" 
+                            required 
+                            value={templateSubject} 
+                            onChange={e => setTemplateSubject(e.target.value)} 
+                            className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm font-bold" 
+                            placeholder="Ex: Descubra a sua casa de sonho no Algarve" 
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Preheader (Texto de pré-visualização)</label>
+                          <input 
+                            type="text" 
+                            value={templatePreheader} 
+                            onChange={e => setTemplatePreheader(e.target.value)} 
+                            className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm" 
+                            placeholder="Ex: Seleção exclusiva de vivendas de luxo..." 
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-gray-700 mb-2 block">Conteúdo HTML (Estrutura de Email)</label>
+                        <textarea 
+                          rows={15} 
+                          required 
+                          value={templateContent} 
+                          onChange={e => setTemplateContent(e.target.value)} 
+                          className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm font-mono resize-none" 
+                          placeholder="<html><body>...</body></html>" 
+                        />
+                        <div className="flex justify-between items-start mt-2">
+                          <p className="text-[9px] text-gray-400">Variáveis: [NOME], [IMOVEIS]</p>
+                          <button 
+                            type="button" 
+                            onClick={() => setTemplateContent(`<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Playfair Display', serif; color: #1a1a1a; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; }
+    .header { background: #000000; color: #d4af37; padding: 40px; text-align: center; }
+    .content { padding: 40px; }
+    .footer { background: #f9f9f9; padding: 30px; text-align: center; font-size: 12px; color: #999; }
+    .btn { background: #d4af37; color: #fff; padding: 15px 30px; text-decoration: none; display: inline-block; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 style="margin:0; font-size: 24px; letter-spacing: 3px;">VILLAS & AQUA</h1>
+      <p style="margin:5px 0 0; font-size: 10px; text-transform: uppercase;">Imobiliária Premium</p>
+    </div>
+    <div class="content">
+      <h2 style="font-size: 28px;">Olá, [NOME]</h2>
+      <p style="line-height: 1.6; color: #555;">Temos o prazer de apresentar uma seleção exclusiva das nossas propriedades mais luxuosas no Algarve.</p>
+      
+      <div style="margin: 40px 0;">
+        [IMOVEIS]
+      </div>
+
+      <div style="text-align: center; margin-top: 40px;">
+        <a href="https://villas-aqua.com" class="btn">Ver Todas as Propriedades</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>&copy; ${new Date().getFullYear()} Villas & Aqua. Todos os direitos reservados.</p>
+      <p>Av. 5 de Outubro, Almancil, Algarve</p>
+    </div>
+  </div>
+</body>
+</html>`)}
+                            className="text-[10px] font-bold text-brand-secondary hover:underline"
+                          >
+                            Carregar Estrutura Base Premium
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="flex-1 bg-brand-primary text-white py-4 font-bold uppercase tracking-widest text-[10px] hover:bg-brand-primary/90 transition-all flex items-center justify-center gap-2">
+                          <Save size={14} /> {editingTemplate ? 'Atualizar Modelo' : 'Guardar Modelo'}
+                        </button>
+                         {editingTemplate && (
+                          <button 
+                            type="button" 
+                            onClick={() => { 
+                              setEditingTemplate(null); 
+                              setTemplateName(''); 
+                              setTemplateSubject('');
+                              setTemplatePreheader('');
+                              setTemplateContent(''); 
+                              setNewsletterTab('list'); 
+                            }} 
+                            className="bg-gray-100 text-gray-600 px-4 py-4 hover:bg-gray-200"
+                          >
+                            <RotateCcw size={14} /> Cancelar Edição
+                          </button>
+                        )}
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {newsletterTab === 'list' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {templates.length === 0 ? (
+                    <div className="col-span-full py-20 text-center text-gray-400 italic bg-white border border-gray-100">
+                      Nenhum modelo de newsletter criado. <button onClick={() => setNewsletterTab('create')} className="text-brand-secondary font-bold underline">Criar o primeiro.</button>
+                    </div>
+                  ) : (
+                    templates.map(tpl => (
+                      <div key={tpl.id} className="bg-white border border-gray-200 p-6 flex flex-col group hover:border-brand-secondary transition-all">
+                        <div className="flex justify-between items-start mb-4">
+                          <h3 className="font-bold text-brand-primary">{tpl.name}</h3>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => setPreviewTemplate(tpl)}
+                              className="p-2 text-gray-400 hover:text-brand-secondary"
+                              title="Pré-visualizar"
+                            >
+                              <ExternalLink size={14} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setEditingTemplate(tpl);
+                                setTemplateName(tpl.name);
+                                setTemplateSubject(tpl.subject);
+                                setTemplatePreheader(tpl.preheader || '');
+                                setTemplateContent(tpl.content);
+                                setNewsletterTab('create');
+                              }}
+                              className="p-2 text-gray-400 hover:text-brand-primary"
+                            >
+                              <Settings size={14} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteTemplate(tpl.id)}
+                              className="p-2 text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex-1 bg-gray-50 p-4 border border-gray-100 text-[10px] font-mono text-gray-400 line-clamp-6 mb-4 overflow-hidden">
+                          {tpl.content}
+                        </div>
+                        <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-50">
+                          <span className="text-[9px] text-gray-400 uppercase tracking-widest">
+                            {new Date(tpl.updatedAt).toLocaleDateString()}
+                          </span>
+                          <button 
+                            onClick={() => {
+                              setSelectedTemplateId(tpl.id);
+                              setNewsletterTab('send');
+                            }}
+                            className="text-[9px] font-bold uppercase tracking-widest text-brand-secondary hover:underline"
+                          >
+                            Usar este modelo
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+
+              {newsletterTab === 'send' && (
+                <div className="space-y-8 max-w-5xl mx-auto">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {/* Step 1: Template */}
+                    <div className="bg-white p-8 border border-gray-200 shadow-sm space-y-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold text-xs">1</div>
+                        <h2 className="font-serif font-bold text-brand-primary">Modelo</h2>
+                      </div>
+                      <select 
+                        value={selectedTemplateId} 
+                        onChange={e => setSelectedTemplateId(e.target.value)}
+                        className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                      >
+                        <option value="">Selecionar Modelo...</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>{t.name}</option>
+                        ))}
+                      </select>
+                      {selectedTemplateId && (
+                        <div className="bg-emerald-50 p-4 text-[10px] text-emerald-800 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <Check size={14} className="mt-0.5" />
+                            <span className="font-bold">Modelo pronto para envio.</span>
+                          </div>
+                          <div className="pt-2 border-t border-emerald-200">
+                             <span className="text-[8px] uppercase font-bold text-emerald-600 block mb-0.5">Assunto:</span>
+                             <span className="italic">"{templates.find(t => t.id === selectedTemplateId)?.subject}"</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Step 2: Properties */}
+                    <div className="bg-white p-8 border border-gray-200 shadow-sm space-y-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold text-xs">2</div>
+                        <h2 className="font-serif font-bold text-brand-primary">Imóveis</h2>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                        {properties.filter(p => p.publicationStatus === 'publicado').map(prop => (
+                          <label key={prop.id} className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors group">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedPropIds.includes(prop.id)}
+                              onChange={e => {
+                                if (e.target.checked) setSelectedPropIds([...selectedPropIds, prop.id]);
+                                else setSelectedPropIds(selectedPropIds.filter(id => id !== prop.id));
+                              }}
+                              className="w-4 h-4 accent-brand-secondary" 
+                            />
+                            <div className="flex-1">
+                              <div className="text-[10px] font-bold text-brand-primary truncate">{prop.title}</div>
+                              <div className="text-[9px] text-gray-500">{prop.reference} • €{prop.price.toLocaleString()}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest text-center py-2 border-t border-gray-100">
+                        {selectedPropIds.length} Imóveis Selecionados
+                      </div>
+                    </div>
+
+                    {/* Step 3: Recipients */}
+                    <div className="bg-white p-8 border border-gray-200 shadow-sm space-y-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 rounded-full bg-brand-primary text-white flex items-center justify-center font-bold text-xs">3</div>
+                        <h2 className="font-serif font-bold text-brand-primary">Destinatários</h2>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto space-y-2 pr-2">
+                        {leads.filter(l => l.type === 'newsletter').map(lead => (
+                          <label key={lead.id} className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors group">
+                            <input 
+                              type="checkbox" 
+                              checked={selectedLeadIds.includes(lead.id)}
+                              onChange={e => {
+                                if (e.target.checked) setSelectedLeadIds([...selectedLeadIds, lead.id]);
+                                else setSelectedLeadIds(selectedLeadIds.filter(id => id !== lead.id));
+                              }}
+                              className="w-4 h-4 accent-brand-secondary" 
+                            />
+                            <div className="flex-1">
+                              <div className="text-[10px] font-bold text-brand-primary truncate">{lead.name}</div>
+                              <div className="text-[9px] text-gray-500">{lead.email}</div>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest text-center py-2 border-t border-gray-100">
+                        {selectedLeadIds.length} Subscritores Selecionados
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-brand-primary p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                      <h3 className="text-white font-serif font-bold text-xl mb-1">Pronto para Enviar?</h3>
+                      <p className="text-white/60 text-xs">Irá enviar para {selectedLeadIds.length} contactos com {selectedPropIds.length} imóveis em destaque.</p>
+                    </div>
+                    <button 
+                      onClick={handleSendNewsletter}
+                      disabled={isSending || !selectedTemplateId || selectedLeadIds.length === 0}
+                      className="bg-brand-secondary text-white px-12 py-5 font-bold uppercase tracking-[0.2em] text-xs hover:bg-brand-secondary/90 transition-all flex items-center gap-3 disabled:opacity-30 disabled:cursor-not-allowed shadow-xl"
+                    >
+                      {isSending ? <Loader2 size={18} className="animate-spin" /> : <MailIcon size={18} />}
+                      Disparar Newsletter Agora
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </main>
+
+      {/* Preview Modal */}
+      {previewTemplate && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <div>
+                <h3 className="font-serif font-bold text-brand-primary text-xl">{previewTemplate.name}</h3>
+                <p className="text-xs text-gray-500 mt-1"><span className="font-bold uppercase tracking-widest text-[10px]">Assunto:</span> {previewTemplate.subject}</p>
+              </div>
+              <button onClick={() => setPreviewTemplate(null)} className="p-2 hover:bg-gray-200 transition-colors">
+                <LogOut size={20} className="rotate-180" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto bg-gray-100 p-8">
+              <div className="mx-auto shadow-lg bg-white border border-gray-200 min-h-full">
+                 <div dangerouslySetInnerHTML={{ __html: previewTemplate.content.replace('[NOME]', 'Estimado Cliente').replace('[IMOVEIS]', '<div style="background:#f0f0f0; padding:20px; border:2px dashed #ccc; text-align:center; color:#888;">Os imóveis selecionados aparecerão aqui</div>') }} />
+              </div>
+            </div>
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-4">
+              <button 
+                onClick={() => setPreviewTemplate(null)}
+                className="px-6 py-2 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-800"
+              >
+                Fechar
+              </button>
+              <button 
+                onClick={() => {
+                  setSelectedTemplateId(previewTemplate.id);
+                  setPreviewTemplate(null);
+                  setNewsletterTab('send');
+                }}
+                className="bg-brand-primary text-white px-8 py-3 text-xs font-bold uppercase tracking-widest hover:bg-brand-primary/90 shadow-lg"
+              >
+                Usar este Modelo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

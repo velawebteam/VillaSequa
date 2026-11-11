@@ -90,8 +90,18 @@ export interface Lead {
   message?: string;
   location?: string;
   propertyType?: string;
-  type: 'evaluation' | 'contact' | 'info';
+  type: 'evaluation' | 'contact' | 'info' | 'newsletter';
   status: 'new' | 'contacted' | 'qualified' | 'lost';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewsletterTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  preheader?: string;
+  content: string; // HTML template
   createdAt: string;
   updatedAt: string;
 }

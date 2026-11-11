@@ -172,6 +172,71 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
   );
 };
 
+const NewsletterSection = () => {
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setIsSubmitting(true);
+    try {
+      await addLeadToFirestore({
+        name: 'Assinante Newsletter',
+        email,
+        type: 'newsletter',
+        status: 'new'
+      });
+      setSuccess(true);
+      setEmail('');
+      setTimeout(() => setSuccess(false), 5000);
+    } catch (error) {
+      alert('Erro ao subscrever. Tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section className="py-20 bg-brand-accent/20 border-t border-gray-100">
+      <div className="max-w-4xl mx-auto px-4 text-center">
+        <span className="text-brand-secondary font-bold uppercase tracking-widest text-[10px] mb-4 block">Newsletter Exclusiva</span>
+        <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary mb-6">Receba as Melhores Oportunidades</h2>
+        <p className="text-gray-500 mb-10 max-w-2xl mx-auto text-sm leading-relaxed">Seja o primeiro a conhecer os novos imóveis de luxo no Algarve e receba insights exclusivos do mercado imobiliário diretamente no seu email.</p>
+        
+        {success ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-emerald-50 text-emerald-800 p-6 inline-flex items-center gap-3 border border-emerald-200"
+          >
+            <CheckCircle2 className="text-emerald-500" size={24} />
+            <span className="font-bold text-sm uppercase tracking-wider">Subscrição efetuada com sucesso!</span>
+          </motion.div>
+        ) : (
+          <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row gap-0 max-w-lg mx-auto shadow-2xl">
+            <input 
+              type="email" 
+              required 
+              placeholder="O seu endereço de email..." 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="flex-1 px-6 py-5 bg-white outline-none text-sm text-brand-primary border-none"
+            />
+            <button 
+              disabled={isSubmitting}
+              className="bg-brand-primary text-white px-10 py-5 font-bold uppercase tracking-widest text-xs hover:bg-brand-secondary transition-all disabled:opacity-50"
+            >
+              {isSubmitting ? 'A Processar...' : 'Subscrever'}
+            </button>
+          </form>
+        )}
+      </div>
+    </section>
+  );
+};
+
 const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
   return (
     <footer className="bg-brand-primary text-white pt-20 pb-10" data-theme="dark">
@@ -1052,6 +1117,7 @@ function AppContent({
         /> : <Navigate to="/listing" />} />
       </Routes>
       
+      {!isAdmin && <NewsletterSection />}
       {!isAdmin && <Footer onViewChange={handleViewChange} />}
     </div>
   );

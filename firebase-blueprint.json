@@ -9,22 +9,29 @@
         "title": { "type": "string", "maxLength": 200 },
         "description": { "type": "string", "maxLength": 5000 },
         "price": { "type": "number" },
+        "priceOnRequest": { "type": "boolean" },
         "location": { "type": "string", "maxLength": 200 },
-        "type": { "type": "string", "enum": ["Apartamento", "Vivenda", "Terreno", "Comercial"] },
+        "type": { "type": "string", "enum": ["Apartamento", "Vivenda", "Terreno", "Comercial", "Nova Construção"] },
         "status": { "type": "string", "enum": ["Novo", "Usado", "Em Construção"] },
         "commercialStatus": { "type": "string", "enum": ["disponível", "reservado", "vendido", "arrendado", "indisponível"] },
         "publicationStatus": { "type": "string", "enum": ["publicado", "rascunho", "nao_publicado"] },
         "bedrooms": { "type": "number" },
         "bathrooms": { "type": "number" },
         "area": { "type": "number" },
+        "grossArea": { "type": "number" },
+        "landArea": { "type": "number" },
+        "videoUrl": { "type": "string" },
         "images": { "type": "array", "items": { "type": "string" } },
         "features": { "type": "array", "items": { "type": "string" } },
         "featured": { "type": "boolean" },
         "visibility": { "type": "string", "enum": ["visível", "oculto"] },
+        "category": { "type": "string", "enum": ["venda", "arrendamento", "construcao"] },
+        "reference": { "type": "string" },
+        "energyRate": { "type": "string", "enum": ["A+", "A", "B", "B-", "C", "D", "E", "F", "Exento"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "title", "price", "location", "type", "status", "visibility"]
+      "required": ["id", "title", "price", "location", "type", "status", "visibility", "category", "reference"]
     },
     "WebsiteConfig": {
       "title": "Website Configuration",
@@ -66,12 +73,39 @@
         "message": { "type": "string", "maxLength": 2000 },
         "location": { "type": "string", "maxLength": 200 },
         "propertyType": { "type": "string", "maxLength": 100 },
-        "type": { "type": "string", "enum": ["evaluation", "contact", "info"] },
+        "type": { "type": "string", "enum": ["evaluation", "contact", "info", "newsletter"] },
         "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "name", "email", "phone", "type", "status"]
+    },
+    "NewsletterTemplate": {
+      "title": "Newsletter Template",
+      "description": "A template for sending newsletters",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 200 },
+        "subject": { "type": "string", "maxLength": 200 },
+        "preheader": { "type": "string", "maxLength": 200 },
+        "content": { "type": "string", "maxLength": 50000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "subject", "content"]
+    },
+    "SentNewsletter": {
+      "title": "Sent Newsletter",
+      "description": "Log of a sent newsletter",
+      "type": "object",
+      "properties": {
+        "templateId": { "type": "string" },
+        "propertyIds": { "type": "array", "items": { "type": "string" } },
+        "recipientEmails": { "type": "array", "items": { "type": "string" } },
+        "sentAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["templateId", "propertyIds", "recipientEmails", "sentAt"]
     }
   },
   "firestore": {
@@ -90,6 +124,14 @@
     "leads": {
       "schema": "Lead",
       "description": "Captured leads"
+    },
+    "newsletter_templates": {
+      "schema": "NewsletterTemplate",
+      "description": "Newsletter templates"
+    },
+    "sent_newsletters": {
+      "schema": "SentNewsletter",
+      "description": "Log of sent newsletters"
     }
   }
 }
