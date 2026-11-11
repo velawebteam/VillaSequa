@@ -36,6 +36,9 @@ export const getProperties = (): Property[] => {
         publicationStatus: p.publicationStatus || 'publicado',
         visibility: p.visibility || 'visível',
         category: p.category || 'venda',
+        reference: p.reference || `REF-${p.id || Date.now()}`,
+        energyRate: p.energyRate,
+        priceOnRequest: p.priceOnRequest || false,
         createdAt: p.createdAt || new Date().toISOString(),
         updatedAt: p.updatedAt || new Date().toISOString()
       }));
@@ -78,6 +81,9 @@ export const addProperty = (property: Partial<Property>): Property => {
     features: property.features || [],
     featured: property.featured || false,
     category: property.category || 'venda',
+    reference: property.reference || `REF-${Date.now()}`,
+    energyRate: property.energyRate,
+    priceOnRequest: property.priceOnRequest || false,
     createdAt: now,
     updatedAt: now,
   };
@@ -128,6 +134,9 @@ export const exportPropertiesToXml = (properties: Property[]): string => {
     xml += `    <featured>${p.featured ? 'true' : 'false'}</featured>\n`;
     xml += `    <visibility>${p.visibility}</visibility>\n`;
     xml += `    <category>${p.category}</category>\n`;
+    xml += `    <reference>${p.reference}</reference>\n`;
+    if (p.energyRate) xml += `    <energyRate>${p.energyRate}</energyRate>\n`;
+    xml += `    <priceOnRequest>${p.priceOnRequest ? 'true' : 'false'}</priceOnRequest>\n`;
     xml += `    <images>\n`;
     p.images.forEach(img => {
       xml += `      <image><![CDATA[${img}]]></image>\n`;
@@ -219,6 +228,9 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
       features,
       featured,
       category: (getText('category') || getText('categoria')) as Property['category'] || (rawStatus.includes('construcao') ? 'construcao' : 'venda'),
+      reference: getText('reference') || getText('referencia') || `CRM-${index + 1}`,
+      energyRate: (getText('energyRate') || getText('energy_rate') || getText('classe_energetica')) as Property['energyRate'],
+      priceOnRequest: getText('priceOnRequest') === 'true',
       createdAt: now,
       updatedAt: now
     });

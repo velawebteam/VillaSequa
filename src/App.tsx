@@ -31,7 +31,8 @@ import {
   Linkedin,
   LayoutGrid,
   Euro,
-  Building2
+  Building2,
+  FileCode
 } from 'lucide-react';
 import Lenis from 'lenis';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
@@ -333,7 +334,11 @@ const PropertyCard = ({ property, onSelect, onToggleFavorite, isFav, ...props }:
         <div className="flex justify-between items-start mb-2">
           <span className="text-brand-secondary text-sm font-semibold uppercase tracking-wider">{property.type}</span>
           <span className="text-xl font-bold text-brand-primary">
-            {property.price.toLocaleString('pt-PT')} €
+            {property.priceOnRequest ? (
+              <span className="text-sm uppercase tracking-widest text-brand-secondary">Sob Consulta</span>
+            ) : (
+              `${property.price.toLocaleString('pt-PT')} €`
+            )}
           </span>
         </div>
         <h3 className="text-lg font-serif font-bold mb-3 line-clamp-1 group-hover:text-brand-secondary transition-colors">
@@ -531,7 +536,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">15+</p>
+              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsYears || '15+'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Anos de Experiência</p>
             </motion.div>
             <motion.div
@@ -540,7 +545,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">800+</p>
+              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsSold || '800+'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Imóveis Vendidos</p>
             </motion.div>
             <motion.div
@@ -549,7 +554,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">1.2k</p>
+              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsClients || '1.2k'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Clientes Felizes</p>
             </motion.div>
             <motion.div
@@ -558,7 +563,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">100%</p>
+              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsTransparency || '100%'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Transparência</p>
             </motion.div>
           </div>
@@ -1026,9 +1031,9 @@ function AppContent({
           onPropertiesChange={() => setPropertiesVersion(v => v + 1)} 
         />} />
         <Route path="/sell" element={<SellView />} />
-        <Route path="/services" element={<ServicesView onViewChange={handleViewChange} />} />
-        <Route path="/about" element={<AboutView onViewChange={handleViewChange} />} />
-        <Route path="/contact" element={<ContactView properties={allProperties} />} />
+        <Route path="/services" element={<ServicesView onViewChange={handleViewChange} config={websiteConfig} />} />
+        <Route path="/about" element={<AboutView onViewChange={handleViewChange} config={websiteConfig} />} />
+        <Route path="/contact" element={<ContactView properties={allProperties} config={websiteConfig} />} />
         <Route path="/favorites" element={<FavoritesView 
           properties={allProperties}
           onSelectProperty={onSelectProperty} 
@@ -1038,7 +1043,10 @@ function AppContent({
         />} />
         <Route path="/detail" element={selectedProperty ? <DetailView 
           property={selectedProperty}
+          allProperties={allProperties}
           onToggleFavorite={handleToggleFavorite}
+          onSelect={onSelectProperty}
+          favorites={favorites}
           isFav={favorites.includes(selectedProperty.id)}
           onViewChange={handleViewChange}
         /> : <Navigate to="/listing" />} />
@@ -1135,13 +1143,15 @@ const ListingView = ({ properties: initialProps, onSelectProperty, onToggleFavor
   initialFilters: SearchFilters
 }) => {
   const [search, setSearch] = useState('');
+  const [refSearch, setRefSearch] = useState('');
   const [filterType, setFilterType] = useState('Todos');
   const properties = initialProps.filter(p => p.visibility === 'visível');
   
   const filtered = properties.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.location.toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'Todos' || p.type === filterType;
-    return matchesSearch && matchesType;
+    const matchesRef = refSearch === '' || (p.reference || '').toLowerCase().includes(refSearch.toLowerCase());
+    return matchesSearch && matchesType && matchesRef;
   });
 
   return (
@@ -1153,15 +1163,25 @@ const ListingView = ({ properties: initialProps, onSelectProperty, onToggleFavor
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-4 sm:p-6 rounded-none shadow-sm mb-12 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-          <div className="flex-1 relative">
+        <div className="bg-white p-4 sm:p-6 rounded-none shadow-sm mb-12 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+          <div className="flex-[2] relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input 
               type="text" 
-              placeholder="Localização ou referência..." 
+              placeholder="Localização ou nome..." 
               className="w-full pl-12 pr-4 py-4 sm:py-3 bg-gray-50 rounded-none outline-none border border-transparent focus:border-brand-secondary transition-all text-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="flex-1 relative">
+            <FileCode className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Referência..." 
+              className="w-full pl-12 pr-4 py-4 sm:py-3 bg-gray-50 rounded-none outline-none border border-transparent focus:border-brand-secondary transition-all text-sm font-mono"
+              value={refSearch}
+              onChange={(e) => setRefSearch(e.target.value)}
             />
           </div>
           <div className="flex gap-4">
@@ -1175,9 +1195,10 @@ const ListingView = ({ properties: initialProps, onSelectProperty, onToggleFavor
               <option>Vivenda</option>
               <option>Terreno</option>
               <option>Comercial</option>
+              <option>Nova Construção</option>
             </select>
           </div>
-          <div className="text-[10px] uppercase tracking-widest font-bold text-gray-400 sm:border-l border-gray-100 sm:pl-4 flex items-center justify-center sm:justify-start">
+          <div className="text-[10px] uppercase tracking-widest font-bold text-gray-400 lg:border-l border-gray-100 lg:pl-4 flex items-center justify-center lg:justify-start">
             {filtered.length} resultados
           </div>
         </div>
@@ -1208,9 +1229,20 @@ const ListingView = ({ properties: initialProps, onSelectProperty, onToggleFavor
   );
 };
 
-const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: { 
+const DetailView = ({ 
+  property, 
+  allProperties,
+  onToggleFavorite, 
+  onSelect,
+  favorites,
+  isFav, 
+  onViewChange 
+}: { 
   property: Property, 
+  allProperties: Property[],
   onToggleFavorite: (id: string) => void,
+  onSelect: (p: Property) => void,
+  favorites: string[],
   isFav: boolean,
   onViewChange: (v: View) => void
 }) => {
@@ -1221,6 +1253,11 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
     phone: '',
     message: ''
   });
+
+  const similarProperties = allProperties
+    .filter(p => p.id !== property.id && p.visibility === 'visível')
+    .filter(p => p.category === property.category || p.type === property.type)
+    .slice(0, 3);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1256,7 +1293,7 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
           <ArrowRight size={20} className="rotate-180" /> Voltar à Listagem
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-20">
           {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="relative rounded-none overflow-hidden mb-10 group bg-gray-100 shadow-xl">
@@ -1289,7 +1326,13 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-6 sm:p-10 bg-gray-50 rounded-none mb-16 border border-gray-100">
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Preço</span>
-                <span className="text-2xl font-bold text-brand-primary leading-none">{property.price.toLocaleString('pt-PT')} €</span>
+                <span className="text-2xl font-bold text-brand-primary leading-none">
+                  {property.priceOnRequest ? (
+                    <span className="text-xs uppercase tracking-widest">Sob Consulta</span>
+                  ) : (
+                    `${property.price.toLocaleString('pt-PT')} €`
+                  )}
+                </span>
               </div>
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Área Útil</span>
@@ -1301,9 +1344,59 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
               </div>
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Referência</span>
-                <span className="text-2xl font-bold text-brand-primary leading-none">#{property.id}A</span>
+                <span className="text-2xl font-bold text-brand-primary leading-none">{property.reference}</span>
               </div>
+              {property.grossArea && property.grossArea > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Área Bruta</span>
+                  <span className="text-2xl font-bold text-brand-primary leading-none">{property.grossArea} m²</span>
+                </div>
+              )}
+              {property.landArea && property.landArea > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Área Terreno</span>
+                  <span className="text-2xl font-bold text-brand-primary leading-none">{property.landArea} m²</span>
+                </div>
+              )}
+              {(property.coordinates?.lat !== 0 || property.coordinates?.lng !== 0) && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Coordenadas</span>
+                  <span className="text-sm font-bold text-brand-primary leading-none">{property.coordinates?.lat.toFixed(4)}, {property.coordinates?.lng.toFixed(4)}</span>
+                </div>
+              )}
+              {property.energyRate && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary">Eficiência Energética</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-8 h-8 flex items-center justify-center font-bold text-white text-xs rounded-sm ${
+                      ['A+', 'A'].includes(property.energyRate) ? 'bg-emerald-600' :
+                      ['B', 'B-'].includes(property.energyRate) ? 'bg-emerald-400' :
+                      ['C'].includes(property.energyRate) ? 'bg-yellow-400' :
+                      ['D'].includes(property.energyRate) ? 'bg-orange-400' :
+                      ['E', 'F'].includes(property.energyRate) ? 'bg-red-500' : 'bg-gray-400'
+                    }`}>
+                      {property.energyRate}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {property.videoUrl && (
+              <div className="mb-16">
+                <h3 className="text-2xl font-serif font-bold mb-8 border-l-4 border-brand-secondary pl-6">Vídeo da Propriedade</h3>
+                <div className="aspect-video bg-gray-100 shadow-xl overflow-hidden">
+                  <iframe
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${property.videoUrl.split('v=')[1]?.split('&')[0] || property.videoUrl.split('/').pop()}`}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              </div>
+            )}
 
             <div className="mb-16">
               <h3 className="text-2xl font-serif font-bold mb-8 border-l-4 border-brand-secondary pl-6">Descrição</h3>
@@ -1407,6 +1500,28 @@ const DetailView = ({ property, onToggleFavorite, isFav, onViewChange }: {
             </div>
           </div>
         </div>
+
+        {/* Similar Properties Section */}
+        {similarProperties.length > 0 && (
+          <div className="mt-16 pt-16 border-t border-gray-100">
+            <div className="mb-12">
+              <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Recomendado para si</span>
+              <h2 className="text-3xl md:text-4xl font-serif font-bold text-brand-primary">Imóveis Semelhantes</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {similarProperties.map((p) => (
+                <PropertyCard 
+                  key={p.id}
+                  property={p} 
+                  onSelect={onSelect} 
+                  onToggleFavorite={onToggleFavorite}
+                  isFav={favorites.includes(p.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1469,7 +1584,16 @@ const FavoritesView = ({ properties, onSelectProperty, onToggleFavorite, favorit
   );
 };
 
-const ContactView = ({ properties }: { properties: Property[] }) => {
+const ContactView = ({ properties, config }: { properties: Property[], config?: WebsiteConfig }) => {
+  const title = config?.contactTitle || 'Estamos Aqui Para o Ajudar';
+  const subtitle = config?.contactSubtitle || 'Tem alguma questão sobre um imóvel ou gostaria de uma avaliação? A nossa equipa de especialistas está pronta para responder.';
+  const address = config?.contactAddress || 'Av. 5 de Outubro, 123, 8000-001 Faro, Algarve';
+  const phone = config?.contactPhone || '+351 289 123 456';
+  const email = config?.contactEmail || 'geral@imobiliariapremium.pt';
+  const scheduleWeek = config?.contactScheduleWeek || '09:00 - 18:30';
+  const scheduleSat = config?.contactScheduleSat || '10:00 - 13:00';
+  const scheduleSun = config?.contactScheduleSun || 'Encerrado';
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -1513,8 +1637,8 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Fale Connosco</span>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8">Estamos Aqui Para o Ajudar</h1>
-          <p className="text-brand-muted text-lg leading-relaxed">Tem alguma questão sobre um imóvel ou gostaria de uma avaliação? A nossa equipa de especialistas está pronta para responder.</p>
+          <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8">{title}</h1>
+          <p className="text-brand-muted text-lg leading-relaxed">{subtitle}</p>
         </div>
 
         <div className="flex flex-col items-center gap-16">
@@ -1528,7 +1652,7 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">O Nosso Escritório</div>
-                    <div className="text-brand-muted text-sm px-4">Av. 5 de Outubro, 123, 8000-001 Faro, Algarve</div>
+                    <div className="text-brand-muted text-sm px-4">{address}</div>
                   </div>
                 </div>
                 
@@ -1538,7 +1662,7 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">Telefone</div>
-                    <div className="text-brand-muted text-sm">+351 289 123 456</div>
+                    <div className="text-brand-muted text-sm">{phone}</div>
                     <div className="text-brand-muted/60 text-xs mt-2">Segunda a Sexta, 09h - 18h</div>
                   </div>
                 </div>
@@ -1549,7 +1673,7 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">Email</div>
-                    <div className="text-brand-muted text-sm">geral@imobiliariapremium.pt</div>
+                    <div className="text-brand-muted text-sm">{email}</div>
                   </div>
                 </div>
               </div>
@@ -1560,15 +1684,15 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
               <div className="bg-brand-primary p-8 text-white rounded-none">
                 <div className="flex justify-between py-3 border-b border-white/10">
                   <span>Segunda — Sexta</span>
-                  <span className="font-bold">09:00 - 18:30</span>
+                  <span className="font-bold">{scheduleWeek}</span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-white/10">
                   <span>Sábado</span>
-                  <span className="font-bold">10:00 - 13:00</span>
+                  <span className="font-bold">{scheduleSat}</span>
                 </div>
                 <div className="flex justify-between py-3">
                   <span>Domingo</span>
-                  <span className="text-white/40 italic">Encerrado</span>
+                  <span className="text-white/40 italic">{scheduleSun}</span>
                 </div>
               </div>
             </div>
@@ -1672,14 +1796,17 @@ const ContactView = ({ properties }: { properties: Property[] }) => {
 );
 };
 
-const ServicesView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
+const ServicesView = ({ onViewChange, config }: { onViewChange: (v: View) => void, config?: WebsiteConfig }) => {
+  const title = config?.servicesTitle || 'Soluções Imobiliárias de Excelência';
+  const subtitle = config?.servicesSubtitle || 'Mais do que mediadores, somos os seus parceiros estratégicos no mercado imobiliário do Algarve.';
+  
   return (
     <div className="pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Nossa Especialidade</span>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-4">Soluções Imobiliárias de Excelência</h1>
-          <p className="text-brand-muted text-lg leading-relaxed px-4">Mais do que mediadores, somos os seus parceiros estratégicos no mercado imobiliário do Algarve.</p>
+          <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-4">{title}</h1>
+          <p className="text-brand-muted text-lg leading-relaxed px-4">{subtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-24">
@@ -1747,7 +1874,13 @@ const ServicesView = ({ onViewChange }: { onViewChange: (v: View) => void }) => 
   );
 };
 
-const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
+const AboutView = ({ onViewChange, config }: { onViewChange: (v: View) => void, config?: WebsiteConfig }) => {
+  const title = config?.aboutTitle || 'Confiança, Proximidade, Resultados.';
+  const text1 = config?.aboutText1 || 'A nossa imobiliária nasceu da paixão pelo mercado imobiliário algarvio e da necessidade de oferecer um serviço verdadeiramente premium, onde o cliente não é apenas mais um número, mas sim o centro de toda a operação.';
+  const text2 = config?.aboutText2 || 'Com sede no coração do Algarve, a nossa equipa combina décadas de conhecimento local com uma visão moderna e tecnológica do negócio imobiliário internacional.';
+  const image = config?.aboutImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1000';
+  const years = config?.aboutYearsCount || '15';
+
   return (
     <div className="pt-32 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1759,12 +1892,12 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
               transition={{ duration: 1 }}
             >
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Nossa História</span>
-              <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-0">Confiança, Proximidade, Resultados.</h1>
+              <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-0">{title}</h1>
               <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                A nossa imobiliária nasceu da paixão pelo mercado imobiliário algarvio e da necessidade de oferecer um serviço verdadeiramente premium, onde o cliente não é apenas mais um número, mas sim o centro de toda a operação.
+                {text1}
               </p>
               <p className="text-gray-600 text-lg leading-relaxed mb-10">
-                Com sede no coração do Algarve, a nossa equipa combina décadas de conhecimento local com uma visão moderna e tecnológica do negócio imobiliário internacional.
+                {text2}
               </p>
               <div className="flex flex-wrap gap-8">
                 <div className="flex items-center gap-3">
@@ -1795,7 +1928,7 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
               className="relative"
             >
               <img 
-                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1000" 
+                src={image} 
                 alt="Sobre a nossa imobiliária"
                 className="rounded-none shadow-2xl"
               />
@@ -1806,7 +1939,7 @@ const AboutView = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
                 transition={{ duration: 0.6, delay: 0.8 }}
                 className="absolute -bottom-10 -right-10 bg-brand-secondary p-10 rounded-none text-white shadow-2xl md:block hidden"
               >
-                <span className="text-5xl font-serif font-bold block mb-2">15</span>
+                <span className="text-5xl font-serif font-bold block mb-2">{years}</span>
                 <span className="text-xs uppercase tracking-[0.2em] font-bold">Anos de Excelência</span>
               </motion.div>
             </motion.div>

@@ -2,6 +2,7 @@ import { db } from './firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export interface WebsiteConfig {
+  // Home Page
   heroTitle?: string;
   heroSubtitle?: string;
   heroImage?: string;
@@ -9,6 +10,32 @@ export interface WebsiteConfig {
   evalTitle?: string;
   evalSubtitle?: string;
   evalImage?: string;
+  statsYears?: string;
+  statsSold?: string;
+  statsClients?: string;
+  statsTransparency?: string;
+
+  // About Page
+  aboutTitle?: string;
+  aboutText1?: string;
+  aboutText2?: string;
+  aboutImage?: string;
+  aboutYearsCount?: string;
+
+  // Services Page
+  servicesTitle?: string;
+  servicesSubtitle?: string;
+
+  // Contact Page
+  contactTitle?: string;
+  contactSubtitle?: string;
+  contactAddress?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  contactScheduleWeek?: string;
+  contactScheduleSat?: string;
+  contactScheduleSun?: string;
+
   updatedAt?: string;
 }
 

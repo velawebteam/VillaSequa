@@ -8,22 +8,59 @@ export interface Property {
   title: string;
   description: string;
   price: number;
+  priceOnRequest?: boolean;
   location: string;
-  type: 'Apartamento' | 'Vivenda' | 'Terreno' | 'Comercial';
+  type: 'Apartamento' | 'Vivenda' | 'Terreno' | 'Comercial' | 'Nova Construção';
   status: 'Novo' | 'Usado' | 'Em Construção';
   commercialStatus: 'disponível' | 'reservado' | 'vendido' | 'arrendado' | 'indisponível';
   publicationStatus: 'publicado' | 'rascunho' | 'nao_publicado';
   bedrooms: number;
   bathrooms: number;
   area: number;
+  grossArea?: number;
+  landArea?: number;
+  videoUrl?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
   images: string[];
   features: string[];
   featured?: boolean;
   visibility: 'visível' | 'oculto';
   category: 'venda' | 'arrendamento' | 'construcao';
+  reference: string;
+  energyRate?: 'A+' | 'A' | 'B' | 'B-' | 'C' | 'D' | 'E' | 'F' | 'Exento';
   createdAt: string;
   updatedAt: string;
 }
+
+export const ENERGY_RATES = ['A+', 'A', 'B', 'B-', 'C', 'D', 'E', 'F', 'Exento'] as const;
+
+export const PROPERTY_FEATURES = [
+  'Piscina',
+  'Jardim',
+  'Garagem',
+  'Vista Mar',
+  'Vista Golfe',
+  'Ar Condicionado',
+  'Lareira',
+  'Cozinha Equipada',
+  'Painéis Solares',
+  'Domótica',
+  'Alarme',
+  'Jacuzzi',
+  'Ginásio',
+  'Campo de Ténis',
+  'Barbecue',
+  'Terraço',
+  'Varanda',
+  'Arrecadação',
+  'Elevador',
+  'Mobilado',
+  'Vidros Duplos',
+  'Aquecimento Central'
+] as const;
 
 export interface SearchFilters {
   location?: string;
@@ -31,6 +68,7 @@ export interface SearchFilters {
   minPrice?: number;
   maxPrice?: number;
   bedrooms?: number;
+  reference?: string;
 }
 
 export interface Client {
