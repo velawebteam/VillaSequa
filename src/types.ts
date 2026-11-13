@@ -33,7 +33,17 @@ export interface Property {
   energyRate?: 'A+' | 'A' | 'B' | 'B-' | 'C' | 'D' | 'E' | 'F' | 'Exento';
   createdAt: string;
   updatedAt: string;
+  createdBy: string;
 }
+
+export const FONTS = [
+  { id: 'font-sans', name: 'Inter' },
+  { id: 'font-serif', name: 'Cormorant Garamond' },
+  { id: 'font-playfair', name: 'Playfair Display' },
+  { id: 'font-montserrat', name: 'Montserrat' },
+  { id: 'font-lora', name: 'Lora' },
+  { id: 'font-bodoni', name: 'Bodoni Moda' }
+] as const;
 
 export const ENERGY_RATES = ['A+', 'A', 'B', 'B-', 'C', 'D', 'E', 'F', 'Exento'] as const;
 
@@ -78,6 +88,12 @@ export interface Client {
   phone: string;
   email: string;
   interest: 'compra' | 'venda' | 'arrendamento';
+  createdBy?: string;
+  transferFrom?: string;
+  transferTo?: string;
+  transferStatus?: 'pending' | 'accepted' | 'rejected' | '';
+  transferNote?: string;
+  transferAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -90,7 +106,13 @@ export interface Lead {
   message?: string;
   location?: string;
   propertyType?: string;
-  type: 'evaluation' | 'contact' | 'info' | 'newsletter';
+  category?: 'venda' | 'arrendamento' | 'construcao' | '';
+  bedrooms?: number;
+  maxPrice?: number;
+  desiredFeatures?: string[];
+  matchedPropertyIds?: string[];
+  matchedAt?: string;
+  type: 'evaluation' | 'contact' | 'info' | 'newsletter' | 'match';
   status: 'new' | 'contacted' | 'qualified' | 'lost';
   createdAt: string;
   updatedAt: string;

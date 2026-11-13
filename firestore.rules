@@ -42,7 +42,7 @@ service cloud.firestore {
              data.name is string && data.name.size() <= 200 &&
              data.email is string && data.email.size() <= 100 &&
              data.phone is string && data.phone.size() <= 20 &&
-             data.type in ['evaluation', 'contact', 'info', 'newsletter'] &&
+             data.type in ['evaluation', 'contact', 'info', 'newsletter', 'match'] &&
              data.status in ['new', 'contacted', 'qualified', 'lost'];
     }
 

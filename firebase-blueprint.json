@@ -29,15 +29,24 @@
         "reference": { "type": "string" },
         "energyRate": { "type": "string", "enum": ["A+", "A", "B", "B-", "C", "D", "E", "F", "Exento"] },
         "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
       },
-      "required": ["id", "title", "price", "location", "type", "status", "visibility", "category", "reference"]
+      "required": ["id", "title", "price", "location", "type", "status", "visibility", "category", "reference", "createdBy"]
     },
     "WebsiteConfig": {
       "title": "Website Configuration",
-      "description": "Global settings for website content",
+      "description": "Global settings for website content, header navigation, and footer",
       "type": "object",
       "properties": {
+        "headerLinksPt": { "type": "array", "description": "Ordered and toggleable header links for Portuguese version" },
+        "headerLinksEn": { "type": "array", "description": "Ordered and toggleable header links for English version" },
+        "footerInstagramUrl": { "type": "string", "maxLength": 500 },
+        "footerFacebookUrl": { "type": "string", "maxLength": 500 },
+        "footerLinkedinUrl": { "type": "string", "maxLength": 500 },
+        "footerAddress": { "type": "string", "maxLength": 500 },
+        "footerPhone": { "type": "string", "maxLength": 100 },
+        "footerEmail": { "type": "string", "maxLength": 200 },
         "heroTitle": { "type": "string", "maxLength": 500 },
         "heroSubtitle": { "type": "string", "maxLength": 1000 },
         "heroImage": { "type": "string" },
@@ -56,6 +65,12 @@
         "phone": { "type": "string", "maxLength": 20 },
         "email": { "type": "string", "maxLength": 100 },
         "interest": { "type": "string", "enum": ["compra", "venda", "arrendamento"] },
+        "createdBy": { "type": "string" },
+        "transferFrom": { "type": "string" },
+        "transferTo": { "type": "string" },
+        "transferStatus": { "type": "string", "enum": ["pending", "accepted", "rejected", ""] },
+        "transferNote": { "type": "string", "maxLength": 500 },
+        "transferAt": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -73,7 +88,13 @@
         "message": { "type": "string", "maxLength": 2000 },
         "location": { "type": "string", "maxLength": 200 },
         "propertyType": { "type": "string", "maxLength": 100 },
-        "type": { "type": "string", "enum": ["evaluation", "contact", "info", "newsletter"] },
+        "category": { "type": "string", "enum": ["venda", "arrendamento", "construcao", ""] },
+        "bedrooms": { "type": "number" },
+        "maxPrice": { "type": "number" },
+        "desiredFeatures": { "type": "array", "items": { "type": "string" } },
+        "matchedPropertyIds": { "type": "array", "items": { "type": "string" } },
+        "matchedAt": { "type": "string", "format": "date-time" },
+        "type": { "type": "string", "enum": ["evaluation", "contact", "info", "newsletter", "match"] },
         "status": { "type": "string", "enum": ["new", "contacted", "qualified", "lost"] },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }

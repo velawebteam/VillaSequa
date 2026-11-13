@@ -90,6 +90,7 @@ export const addPropertyToFirestore = async (property: Partial<Property>): Promi
     energyRate: property.energyRate,
     createdAt: now,
     updatedAt: now,
+    createdBy: property.createdBy || 'admin'
   };
 
   try {
@@ -175,6 +176,7 @@ export const addClientToFirestore = async (client: Partial<Client>): Promise<Cli
     phone: client.phone || '',
     email: client.email || '',
     interest: client.interest || 'compra',
+    createdBy: client.createdBy || 'admin',
     createdAt: now,
     updatedAt: now,
   };
@@ -185,6 +187,22 @@ export const addClientToFirestore = async (client: Partial<Client>): Promise<Cli
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `${CLIENTS_COLLECTION}/${id}`);
     throw error;
+  }
+};
+
+export const updateClientInFirestore = async (id: string, updates: Partial<Client>): Promise<void> => {
+  try {
+    const cleanUpdates: Record<string, unknown> = {};
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    });
+    cleanUpdates.updatedAt = new Date().toISOString();
+    const clientRef = doc(db, CLIENTS_COLLECTION, id);
+    await updateDoc(clientRef, cleanUpdates);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${CLIENTS_COLLECTION}/${id}`);
   }
 };
 
@@ -225,6 +243,12 @@ export const addLeadToFirestore = async (lead: Partial<Lead>): Promise<Lead> => 
     message: lead.message || '',
     location: lead.location || '',
     propertyType: lead.propertyType || '',
+    ...(lead.category ? { category: lead.category } : {}),
+    ...(lead.bedrooms !== undefined ? { bedrooms: lead.bedrooms } : {}),
+    ...(lead.maxPrice !== undefined ? { maxPrice: lead.maxPrice } : {}),
+    ...(lead.desiredFeatures ? { desiredFeatures: lead.desiredFeatures } : {}),
+    ...(lead.matchedPropertyIds ? { matchedPropertyIds: lead.matchedPropertyIds } : {}),
+    ...(lead.matchedAt ? { matchedAt: lead.matchedAt } : {}),
     type: lead.type || 'info',
     status: lead.status || 'new',
     createdAt: now,
@@ -237,6 +261,22 @@ export const addLeadToFirestore = async (lead: Partial<Lead>): Promise<Lead> => 
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, `${LEADS_COLLECTION}/${id}`);
     throw error;
+  }
+};
+
+export const updateLeadInFirestore = async (id: string, updates: Partial<Lead>): Promise<void> => {
+  try {
+    const cleanUpdates: Record<string, unknown> = {};
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value !== undefined) {
+        cleanUpdates[key] = value;
+      }
+    });
+    cleanUpdates.updatedAt = new Date().toISOString();
+    const leadRef = doc(db, LEADS_COLLECTION, id);
+    await updateDoc(leadRef, cleanUpdates);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, `${LEADS_COLLECTION}/${id}`);
   }
 };
 

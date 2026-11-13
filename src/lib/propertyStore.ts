@@ -40,7 +40,8 @@ export const getProperties = (): Property[] => {
         energyRate: p.energyRate,
         priceOnRequest: p.priceOnRequest || false,
         createdAt: p.createdAt || new Date().toISOString(),
-        updatedAt: p.updatedAt || new Date().toISOString()
+        updatedAt: p.updatedAt || new Date().toISOString(),
+        createdBy: p.createdBy || 'admin'
       }));
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(mockProperties));
@@ -86,6 +87,7 @@ export const addProperty = (property: Partial<Property>): Property => {
     priceOnRequest: property.priceOnRequest || false,
     createdAt: now,
     updatedAt: now,
+    createdBy: property.createdBy || 'admin'
   };
   const updated = [newProperty, ...properties];
   saveProperties(updated);
@@ -150,6 +152,96 @@ export const exportPropertiesToXml = (properties: Property[]): string => {
     xml += `  </property>\n`;
   });
   xml += `</properties>`;
+  return xml;
+};
+
+export interface RealEstatePortal {
+  id: string;
+  name: string;
+  market: string;
+  format: string;
+  description: string;
+}
+
+export const REAL_ESTATE_PORTALS: RealEstatePortal[] = [
+  { id: 'idealista', name: 'Idealista', market: 'Portugal & Espanha', format: 'Idealista XML', description: 'Portal líder na Península Ibérica' },
+  { id: 'imovirtual', name: 'Imovirtual', market: 'Portugal', format: 'OLX/Imovirtual XML', description: 'Grande alcance no mercado residencial nacional' },
+  { id: 'casasapo', name: 'Casa Sapo', market: 'Portugal', format: 'Casa Sapo XML', description: 'Portal imobiliário de referência em Portugal' },
+  { id: 'supercasa', name: 'Supercasa', market: 'Portugal', format: 'Supercasa XML', description: 'Integração direta com rede de portais portugueses' },
+  { id: 'olx', name: 'OLX Imóveis', market: 'Portugal', format: 'OLX Feed XML', description: 'Classificados de elevado tráfego nacional' },
+  { id: 'bpi_expresso', name: 'BPI Expresso Imobiliário', market: 'Portugal', format: 'Expresso XML', description: 'Portal associado ao Banco BPI e Expresso' },
+  { id: 'kyero', name: 'Kyero', market: 'Internacional / Algarve', format: 'Kyero v3 XML', description: 'Compradores internacionais no Algarve e Portugal' },
+  { id: 'green_acres', name: 'Green-Acres', market: 'Europa', format: 'Green-Acres XML', description: 'Foco em investidores franceses, belgas e europeus' },
+  { id: 'properstar', name: 'Properstar / ListGlobally', market: 'Rede Global', format: 'ListGlobally XML', description: 'Sindicação para mais de 100 portais internacionais' },
+  { id: 'rightmove', name: 'Rightmove Overseas', market: 'Reino Unido', format: 'Rightmove BLM/XML', description: 'Maior portal imobiliário do mercado britânico' },
+  { id: 'zoopla', name: 'Zoopla Overseas', market: 'Reino Unido', format: 'Zoopla XML', description: 'Alcance direto a compradores do Reino Unido' },
+  { id: 'aplaceinthesun', name: 'A Place in the Sun', market: 'Reino Unido & Irlanda', format: 'APITS XML', description: 'Especializado em segunda habitação e Algarve' },
+  { id: 'jamesedition', name: 'JamesEdition', market: 'Luxo Global', format: 'Luxury XML', description: 'Marketplace internacional de propriedades de luxo' },
+  { id: 'luxuryestate', name: 'LuxuryEstate', market: 'Luxo Internacional', format: 'LuxuryEstate XML', description: 'Imóveis premium e de alto rendimento' },
+  { id: 'thinkspain', name: 'ThinkSpain & Portugal', market: 'Internacional', format: 'Kyero/Standard XML', description: 'Compradores internacionais e expatriados' }
+];
+
+export const exportPropertiesForPortalsXml = (
+  properties: Property[],
+  portalIds: string[],
+  exportedBy?: string
+): string => {
+  const selectedPortalObjs = REAL_ESTATE_PORTALS.filter(portal => portalIds.includes(portal.id));
+  const generatedAt = new Date().toISOString();
+
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<feed>\n';
+  xml += `  <metadata>\n`;
+  xml += `    <generatedAt>${generatedAt}</generatedAt>\n`;
+  if (exportedBy) {
+    xml += `    <consultant><![CDATA[${exportedBy}]]></consultant>\n`;
+  }
+  xml += `    <propertyCount>${properties.length}</propertyCount>\n`;
+  xml += `    <targetPortals>\n`;
+  selectedPortalObjs.forEach(portal => {
+    xml += `      <portal id="${portal.id}" format="${portal.format}"><![CDATA[${portal.name}]]></portal>\n`;
+  });
+  xml += `    </targetPortals>\n`;
+  xml += `  </metadata>\n`;
+  xml += `  <properties>\n`;
+  properties.forEach(p => {
+    xml += `    <property>\n`;
+    xml += `      <id>${p.id}</id>\n`;
+    xml += `      <reference>${p.reference}</reference>\n`;
+    xml += `      <title><![CDATA[${p.title}]]></title>\n`;
+    xml += `      <description><![CDATA[${p.description}]]></description>\n`;
+    xml += `      <price>${p.price}</price>\n`;
+    xml += `      <priceOnRequest>${p.priceOnRequest ? 'true' : 'false'}</priceOnRequest>\n`;
+    xml += `      <location><![CDATA[${p.location}]]></location>\n`;
+    xml += `      <type>${p.type}</type>\n`;
+    xml += `      <category>${p.category}</category>\n`;
+    xml += `      <status>${p.status}</status>\n`;
+    if (p.commercialStatus) xml += `      <commercialStatus>${p.commercialStatus}</commercialStatus>\n`;
+    xml += `      <bedrooms>${p.bedrooms}</bedrooms>\n`;
+    xml += `      <bathrooms>${p.bathrooms}</bathrooms>\n`;
+    xml += `      <area>${p.area}</area>\n`;
+    if (p.grossArea) xml += `      <grossArea>${p.grossArea}</grossArea>\n`;
+    if (p.landArea) xml += `      <landArea>${p.landArea}</landArea>\n`;
+    if (p.energyRate) xml += `      <energyRate>${p.energyRate}</energyRate>\n`;
+    xml += `      <featured>${p.featured ? 'true' : 'false'}</featured>\n`;
+    xml += `      <visibility>${p.visibility}</visibility>\n`;
+    if (p.coordinates && (p.coordinates.lat || p.coordinates.lng)) {
+      xml += `      <coordinates><lat>${p.coordinates.lat}</lat><lng>${p.coordinates.lng}</lng></coordinates>\n`;
+    }
+    if (p.videoUrl) xml += `      <videoUrl><![CDATA[${p.videoUrl}]]></videoUrl>\n`;
+    xml += `      <images>\n`;
+    p.images.forEach(img => {
+      xml += `        <image><![CDATA[${img}]]></image>\n`;
+    });
+    xml += `      </images>\n`;
+    xml += `      <features>\n`;
+    p.features.forEach(f => {
+      xml += `        <feature><![CDATA[${f}]]></feature>\n`;
+    });
+    xml += `      </features>\n`;
+    xml += `    </property>\n`;
+  });
+  xml += `  </properties>\n`;
+  xml += `</feed>`;
   return xml;
 };
 
@@ -232,7 +324,8 @@ export const parsePropertiesXml = (xmlText: string): Property[] => {
       energyRate: (getText('energyRate') || getText('energy_rate') || getText('classe_energetica')) as Property['energyRate'],
       priceOnRequest: getText('priceOnRequest') === 'true',
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      createdBy: 'admin'
     });
   });
 

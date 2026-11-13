@@ -28,7 +28,8 @@ export const mockProperties: Property[] = [
     energyRate: 'A+',
     priceOnRequest: false,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: 'admin'
   },
   {
     id: '2',
@@ -54,7 +55,8 @@ export const mockProperties: Property[] = [
     energyRate: 'A',
     priceOnRequest: false,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: 'admin'
   },
   {
     id: '3',
@@ -80,7 +82,8 @@ export const mockProperties: Property[] = [
     energyRate: 'B',
     priceOnRequest: false,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: 'admin'
   },
   {
     id: '4',
@@ -106,7 +109,8 @@ export const mockProperties: Property[] = [
     energyRate: 'Exento',
     priceOnRequest: false,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: 'admin'
   },
   {
     id: '5',
@@ -132,7 +136,8 @@ export const mockProperties: Property[] = [
     energyRate: 'C',
     priceOnRequest: false,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: 'admin'
   },
   {
     id: '6',
@@ -158,6 +163,7 @@ export const mockProperties: Property[] = [
     energyRate: 'A+',
     priceOnRequest: true,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    createdBy: 'admin'
   }
 ];

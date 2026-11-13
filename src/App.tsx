@@ -8,7 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { Property, View, SearchFilters } from './types';
 import { getFavorites, toggleFavorite } from './lib/favorites';
 import { getPropertiesFromFirestore, seedProperties, addLeadToFirestore } from './lib/firestoreService';
-import { getWebsiteConfig, WebsiteConfig } from './lib/websiteService';
+import { getWebsiteConfig, getResolvedHeaderLinks, WebsiteConfig } from './lib/websiteService';
 import { mockProperties } from './data/mockProperties';
 import { AdminView } from './components/AdminView';
 import { 
@@ -32,7 +32,8 @@ import {
   LayoutGrid,
   Euro,
   Building2,
-  FileCode
+  FileCode,
+  Lock
 } from 'lucide-react';
 import Lenis from 'lenis';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
@@ -42,7 +43,17 @@ import CustomCursor from './components/CustomCursor';
 
 import { Link } from 'react-router-dom';
 
-const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
+const Navbar = ({
+  favoritesCount,
+  config,
+  lang,
+  onLangChange
+}: {
+  favoritesCount: number;
+  config?: WebsiteConfig;
+  lang: 'pt' | 'en';
+  onLangChange: (l: 'pt' | 'en') => void;
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
@@ -53,14 +64,7 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const menuItems = [
-    { label: 'Início', path: '/' },
-    { label: 'Imóveis', path: '/listing' },
-    { label: 'Vender', path: '/sell' },
-    { label: 'Serviços', path: '/services' },
-    { label: 'Sobre Nós', path: '/about' },
-    { label: 'Contacto', path: '/contact' },
-  ];
+  const menuItems = getResolvedHeaderLinks(config, lang).filter(item => item.visible);
 
   // We should force a background if we are not on the home view (which has a hero image)
   const shouldShowBg = isScrolled || location.pathname !== '/';
@@ -79,12 +83,12 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-5">
             {menuItems.map((item) => (
               <Link
-                key={item.path}
+                key={item.id}
                 to={item.path}
-                className={`relative text-[10px] uppercase tracking-[0.2em] font-bold transition-colors group ${
+                className={`relative text-[10px] uppercase tracking-[0.2em] font-bold transition-colors group whitespace-nowrap ${
                   location.pathname === item.path 
                     ? shouldShowBg ? 'text-brand-secondary' : 'text-white underline underline-offset-8 decoration-white/50'
                     : shouldShowBg ? 'text-brand-primary' : 'text-white/80'
@@ -93,6 +97,30 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
                 {item.label}
               </Link>
             ))}
+            <div className={`flex items-center border text-[10px] font-bold tracking-widest ${shouldShowBg ? 'border-gray-200' : 'border-white/25'}`}>
+              <button
+                type="button"
+                onClick={() => onLangChange('pt')}
+                className={`px-2 py-1 transition-colors ${
+                  lang === 'pt'
+                    ? 'bg-brand-secondary text-white'
+                    : shouldShowBg ? 'text-brand-primary hover:bg-gray-100' : 'text-white/80 hover:text-white'
+                }`}
+              >
+                PT
+              </button>
+              <button
+                type="button"
+                onClick={() => onLangChange('en')}
+                className={`px-2 py-1 transition-colors ${
+                  lang === 'en'
+                    ? 'bg-brand-secondary text-white'
+                    : shouldShowBg ? 'text-brand-primary hover:bg-gray-100' : 'text-white/80 hover:text-white'
+                }`}
+              >
+                EN
+              </button>
+            </div>
             <Link 
               to="/favorites"
               className={`relative p-2 rounded-none transition-colors hover:bg-black/5 ${shouldShowBg ? 'text-brand-primary' : 'text-white'}`}
@@ -106,12 +134,21 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
             </Link>
             <Link 
               to="/listing"
-              className="bg-brand-secondary text-white px-6 py-2.5 rounded-none text-[10px] uppercase tracking-widest font-bold hover:bg-brand-secondary/90 transition-all shadow-md"
+              className="bg-brand-secondary text-white px-5 py-2.5 rounded-none text-[10px] uppercase tracking-widest font-bold hover:bg-brand-secondary/90 transition-all shadow-md whitespace-nowrap"
             >
-              Ver Imóveis
+              {lang === 'en' ? 'View Properties' : 'Ver Imóveis'}
+            </Link>
+            <Link
+              to="/admin"
+              className={`px-4 py-2.5 rounded-none text-[10px] uppercase tracking-widest font-bold transition-all border inline-flex items-center gap-1.5 whitespace-nowrap ${
+                shouldShowBg
+                  ? 'border-brand-primary/30 text-brand-primary hover:bg-brand-primary hover:text-white'
+                  : 'border-white/40 text-white hover:bg-white hover:text-brand-primary'
+              }`}
+            >
+              <Lock size={12} /> {lang === 'en' ? 'Backoffice' : 'Ir para o Backoffice'}
             </Link>
           </div>
-          {/* ... mobile menu ... */}
 
           {/* Mobile Right Icons */}
           <div className="md:hidden flex items-center space-x-2">
@@ -152,11 +189,30 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white z-50 flex flex-col pt-24 px-8 pb-12 md:hidden shadow-2xl"
+              className="fixed top-0 right-0 bottom-0 w-[85%] max-w-sm bg-white z-50 flex flex-col pt-20 px-8 pb-12 md:hidden shadow-2xl overflow-y-auto"
             >
+              <div className="flex items-center justify-between pb-4 mb-2 border-b border-gray-100">
+                <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Idioma / Language</span>
+                <div className="flex border border-gray-200 text-[10px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => onLangChange('pt')}
+                    className={`px-3 py-1.5 ${lang === 'pt' ? 'bg-brand-primary text-white' : 'text-gray-600'}`}
+                  >
+                    PT
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onLangChange('en')}
+                    className={`px-3 py-1.5 ${lang === 'en' ? 'bg-brand-primary text-white' : 'text-gray-600'}`}
+                  >
+                    EN
+                  </button>
+                </div>
+              </div>
               {menuItems.map((item) => (
                 <Link
-                  key={item.path}
+                  key={item.id}
                   to={item.path}
                   onClick={() => setIsOpen(false)}
                   className="text-lg font-serif font-bold text-brand-primary py-4 border-b border-gray-100"
@@ -164,6 +220,13 @@ const Navbar = ({ favoritesCount }: { favoritesCount: number }) => {
                   {item.label}
                 </Link>
               ))}
+              <Link
+                to="/admin"
+                onClick={() => setIsOpen(false)}
+                className="mt-6 bg-brand-primary text-white px-6 py-4 text-xs uppercase tracking-widest font-bold inline-flex items-center justify-center gap-2 shadow-md"
+              >
+                <Lock size={14} /> {lang === 'en' ? 'Backoffice' : 'Ir para o Backoffice'}
+              </Link>
             </motion.div>
           </>
         )}
@@ -237,7 +300,27 @@ const NewsletterSection = () => {
   );
 };
 
-const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
+const normalizeSocialUrl = (url?: string): string => {
+  const trimmed = (url || '').trim();
+  if (!trimmed || trimmed === '#') return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
+const Footer = ({
+  onViewChange,
+  config
+}: {
+  onViewChange: (v: View) => void;
+  config?: WebsiteConfig;
+}) => {
+  const instagramUrl = normalizeSocialUrl(config?.footerInstagramUrl);
+  const facebookUrl = normalizeSocialUrl(config?.footerFacebookUrl);
+  const linkedinUrl = normalizeSocialUrl(config?.footerLinkedinUrl);
+  const footerAddress = config?.footerAddress?.trim() || config?.contactAddress?.trim() || 'Av. 5 de Outubro, 123\n8000-001 Faro, Algarve';
+  const footerPhone = config?.footerPhone?.trim() || config?.contactPhone?.trim() || '+351 289 123 456';
+  const footerEmail = config?.footerEmail?.trim() || config?.contactEmail?.trim() || 'geral@imobiliariapremium.pt';
+
   return (
     <footer className="bg-brand-primary text-white pt-20 pb-10" data-theme="dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -253,9 +336,36 @@ const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
               Líderes no mercado imobiliário do Algarve, proporcionando um serviço premium e personalizado para compradores e vendedores exigentes.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"><Instagram size={18} /></a>
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"><Facebook size={18} /></a>
-              <a href="#" className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"><Linkedin size={18} /></a>
+              <a
+                href={instagramUrl || '#'}
+                target={instagramUrl ? '_blank' : undefined}
+                rel={instagramUrl ? 'noopener noreferrer' : undefined}
+                aria-label="Instagram"
+                onClick={e => { if (!instagramUrl) e.preventDefault(); }}
+                className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"
+              >
+                <Instagram size={18} />
+              </a>
+              <a
+                href={facebookUrl || '#'}
+                target={facebookUrl ? '_blank' : undefined}
+                rel={facebookUrl ? 'noopener noreferrer' : undefined}
+                aria-label="Facebook"
+                onClick={e => { if (!facebookUrl) e.preventDefault(); }}
+                className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"
+              >
+                <Facebook size={18} />
+              </a>
+              <a
+                href={linkedinUrl || '#'}
+                target={linkedinUrl ? '_blank' : undefined}
+                rel={linkedinUrl ? 'noopener noreferrer' : undefined}
+                aria-label="LinkedIn"
+                onClick={e => { if (!linkedinUrl) e.preventDefault(); }}
+                className="p-2 bg-white/5 rounded-full hover:bg-brand-secondary hover:text-brand-primary transition-colors"
+              >
+                <Linkedin size={18} />
+              </a>
             </div>
           </div>
 
@@ -288,15 +398,19 @@ const Footer = ({ onViewChange }: { onViewChange: (v: View) => void }) => {
             <ul className="space-y-4 text-sm text-gray-300">
               <li className="flex items-start space-x-3">
                 <MapPin size={18} className="text-brand-secondary mt-1 shrink-0" />
-                <span>Av. 5 de Outubro, 123<br />8000-001 Faro, Algarve</span>
+                <span className="whitespace-pre-line">{footerAddress}</span>
               </li>
               <li className="flex items-center space-x-3">
                 <Phone size={18} className="text-brand-secondary shrink-0" />
-                <span>+351 289 123 456</span>
+                <a href={`tel:${footerPhone.replace(/\s+/g, '')}`} className="hover:text-brand-secondary transition-colors">
+                  {footerPhone}
+                </a>
               </li>
               <li className="flex items-center space-x-3">
                 <Mail size={18} className="text-brand-secondary shrink-0" />
-                <span>geral@imobiliariapremium.pt</span>
+                <a href={`mailto:${footerEmail}`} className="hover:text-brand-secondary transition-colors break-all">
+                  {footerEmail}
+                </a>
               </li>
             </ul>
           </div>
@@ -487,7 +601,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-serif font-bold text-white leading-[1.1] mb-6 tracking-tight"
+              className={`text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-[1.1] mb-6 tracking-tight ${config?.heroTitleFont || 'font-serif'}`}
             >
               {heroTitle}
             </motion.h1>
@@ -497,7 +611,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="text-white/80 text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-light leading-relaxed"
+                className={`text-white/80 text-xl md:text-2xl mb-12 max-w-2xl mx-auto font-light leading-relaxed ${config?.heroSubtitleFont || ''}`}
               >
                 {heroSubtitle}
               </motion.p>
@@ -513,7 +627,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onViewChange('listing')}
-                className="bg-brand-secondary text-white px-8 md:px-12 py-5 rounded-none text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold shadow-2xl min-w-[200px] sm:min-w-[240px] hover:bg-brand-secondary/90 transition-all"
+                className={`bg-brand-secondary text-white px-8 md:px-12 py-5 rounded-none text-[10px] sm:text-xs uppercase tracking-[0.3em] font-bold shadow-2xl min-w-[200px] sm:min-w-[240px] hover:bg-brand-secondary/90 transition-all ${config?.heroButtonTextFont || ''}`}
               >
                 {heroButtonText}
               </motion.button>
@@ -601,7 +715,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsYears || '15+'}</p>
+              <p className={`text-5xl md:text-6xl font-bold text-brand-primary mb-4 tracking-tighter ${config?.statsYearsFont || 'font-serif'}`}>{config?.statsYears || '15+'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Anos de Experiência</p>
             </motion.div>
             <motion.div
@@ -610,7 +724,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsSold || '800+'}</p>
+              <p className={`text-5xl md:text-6xl font-bold text-brand-primary mb-4 tracking-tighter ${config?.statsSoldFont || 'font-serif'}`}>{config?.statsSold || '800+'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Imóveis Vendidos</p>
             </motion.div>
             <motion.div
@@ -619,7 +733,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsClients || '1.2k'}</p>
+              <p className={`text-5xl md:text-6xl font-bold text-brand-primary mb-4 tracking-tighter ${config?.statsClientsFont || 'font-serif'}`}>{config?.statsClients || '1.2k'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Clientes Felizes</p>
             </motion.div>
             <motion.div
@@ -628,7 +742,7 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               viewport={{ once: true }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <p className="text-5xl md:text-6xl font-serif font-bold text-brand-primary mb-4 tracking-tighter">{config?.statsTransparency || '100%'}</p>
+              <p className={`text-5xl md:text-6xl font-bold text-brand-primary mb-4 tracking-tighter ${config?.statsTransparencyFont || 'font-serif'}`}>{config?.statsTransparency || '100%'}</p>
               <p className="text-[10px] uppercase tracking-[0.3em] text-brand-muted font-bold">Transparência</p>
             </motion.div>
           </div>
@@ -695,10 +809,10 @@ const HomeView = ({ properties: initialProps, onSelectProperty, onViewChange, on
               transition={{ duration: 1 }}
             >
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Vender o seu imóvel?</span>
-              <h2 className="text-4xl md:text-6xl font-serif font-bold text-white mb-8 leading-tight tracking-tight">
+              <h2 className={`text-4xl md:text-6xl font-bold text-white mb-8 leading-tight tracking-tight ${config?.evalTitleFont || 'font-serif'}`}>
                 {evalTitle}
               </h2>
-              <p className="text-white/80 text-lg mb-10 leading-relaxed font-light">
+              <p className={`text-white/80 text-lg mb-10 leading-relaxed font-light ${config?.evalSubtitleFont || ''}`}>
                 {evalSubtitle}
               </p>
               <ul className="space-y-6 mb-12">
@@ -1048,6 +1162,15 @@ function AppContent({
   const location = useLocation();
   const navigate = useNavigate();
   const isAdmin = location.pathname.startsWith('/admin');
+  const [siteLang, setSiteLang] = useState<'pt' | 'en'>(() => {
+    const saved = localStorage.getItem('villas_site_lang');
+    return saved === 'en' ? 'en' : 'pt';
+  });
+
+  const handleLangChange = (nextLang: 'pt' | 'en') => {
+    setSiteLang(nextLang);
+    localStorage.setItem('villas_site_lang', nextLang);
+  };
 
   const handleViewChange = (v: View) => {
     if (v === 'home') navigate('/');
@@ -1072,6 +1195,9 @@ function AppContent({
       {!isAdmin && (
         <Navbar 
           favoritesCount={favorites.length}
+          config={websiteConfig}
+          lang={siteLang}
+          onLangChange={handleLangChange}
         />
       )}
       
@@ -1118,7 +1244,7 @@ function AppContent({
       </Routes>
       
       {!isAdmin && <NewsletterSection />}
-      {!isAdmin && <Footer onViewChange={handleViewChange} />}
+      {!isAdmin && <Footer onViewChange={handleViewChange} config={websiteConfig} />}
     </div>
   );
 }
@@ -1290,8 +1416,551 @@ const ListingView = ({ properties: initialProps, onSelectProperty, onToggleFavor
             ))}
           </AnimatePresence>
         </div>
+
+        {/* Step-by-Step Match Contact Form */}
+        <MatchStepForm />
       </div>
     </div>
+  );
+};
+
+const MatchStepForm = () => {
+  const [step, setStep] = useState<number>(1);
+  const [propertyType, setPropertyType] = useState<string>('');
+  const [category, setCategory] = useState<'venda' | 'arrendamento' | ''>('');
+  const [location, setLocation] = useState<string>('');
+  const [bedrooms, setBedrooms] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [name, setName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [phone, setPhone] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [errorMsg, setErrorMsg] = useState<string>('');
+
+  const totalSteps = 6;
+  const propertyTypeOptions = ['Vivenda', 'Apartamento', 'Terreno', 'Comercial', 'Nova Construção'];
+  const popularZones = ['Vilamoura', 'Quinta do Lago', 'Vale do Lobo', 'Loulé', 'Faro', 'Albufeira', 'Tavira', 'Lagos', 'Portimão'];
+  const budgetPresets = category === 'arrendamento'
+    ? [1500, 2500, 4000, 7500]
+    : [300000, 500000, 850000, 1500000, 3000000];
+
+  const handleNext = () => {
+    setErrorMsg('');
+    if (step === 1 && !propertyType) {
+      setErrorMsg('Por favor, selecione o tipo de imóvel que procura.');
+      return;
+    }
+    if (step === 2 && !category) {
+      setErrorMsg('Por favor, indique se procura para compra ou arrendamento.');
+      return;
+    }
+    if (step === 3 && !location.trim()) {
+      setErrorMsg('Por favor, indique a zona pretendida.');
+      return;
+    }
+    if (step === 4 && bedrooms === '') {
+      setErrorMsg('Por favor, selecione ou indique o nº de quartos.');
+      return;
+    }
+    if (step === 5 && (!maxPrice || parseFloat(maxPrice) <= 0)) {
+      setErrorMsg('Por favor, indique o seu orçamento máximo.');
+      return;
+    }
+    setStep(prev => Math.min(totalSteps, prev + 1));
+  };
+
+  const handleBack = () => {
+    setErrorMsg('');
+    setStep(prev => Math.max(1, prev - 1));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      setErrorMsg('Por favor, preencha o seu nome, email e telemóvel para podermos entrar em contacto.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const parsedBedrooms = parseInt(bedrooms, 10);
+      const parsedMaxPrice = parseFloat(maxPrice);
+      const cleanType = propertyType === 'Qualquer' ? '' : propertyType;
+      const categoryLabel = category === 'arrendamento' ? 'Arrendamento' : 'Compra';
+      const summaryMessage = [
+        `Tipo: ${propertyType || 'Qualquer'}`,
+        `Finalidade: ${categoryLabel}`,
+        `Zona: ${location.trim()}`,
+        `Quartos: ${!isNaN(parsedBedrooms) ? parsedBedrooms : bedrooms}`,
+        `Orçamento Máximo: ${!isNaN(parsedMaxPrice) ? `${parsedMaxPrice.toLocaleString('pt-PT')} €` : maxPrice}`,
+      ].join(' | ');
+
+      await addLeadToFirestore({
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        propertyType: cleanType,
+        category: category || '',
+        location: location.trim(),
+        bedrooms: !isNaN(parsedBedrooms) ? parsedBedrooms : undefined,
+        maxPrice: !isNaN(parsedMaxPrice) ? parsedMaxPrice : undefined,
+        message: summaryMessage,
+        type: 'match',
+        status: 'new',
+      });
+
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error('Erro ao registar interesse Match:', err);
+      setErrorMsg('Ocorreu um erro ao enviar o seu registo. Por favor, tente novamente.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReset = () => {
+    setStep(1);
+    setPropertyType('');
+    setCategory('');
+    setLocation('');
+    setBedrooms('');
+    setMaxPrice('');
+    setName('');
+    setEmail('');
+    setPhone('');
+    setIsSubmitted(false);
+    setErrorMsg('');
+  };
+
+  return (
+    <section className="mt-24 bg-brand-primary text-white p-8 sm:p-12 md:p-16 shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-brand-secondary/10 -skew-x-12 translate-x-1/2 pointer-events-none" />
+      <div className="max-w-3xl mx-auto relative z-10">
+        <div className="text-center mb-10">
+          <span className="text-brand-secondary font-bold uppercase tracking-[0.25em] text-[10px] mb-3 block">
+            Procura Personalizada
+          </span>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-white leading-snug">
+            Sabe o que procura/precisa? Registe o seu interesse e entraremos em contacto quando tivermos uma correspondência!
+          </h2>
+        </div>
+
+        {isSubmitted ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white text-brand-primary p-8 sm:p-12 text-center shadow-xl border-t-4 border-brand-secondary"
+          >
+            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 size={36} />
+            </div>
+            <h3 className="text-2xl sm:text-3xl font-serif font-bold text-brand-primary mb-4">
+              Obrigado pelo seu tempo! Entraremos em contacto assim que tivermos o que procura!
+            </h3>
+            <div className="bg-gray-50 border border-gray-200 p-5 text-left text-xs text-gray-600 grid grid-cols-1 sm:grid-cols-2 gap-3 my-8">
+              <div><strong className="text-brand-primary uppercase tracking-wider text-[10px] block">Tipo de Imóvel</strong>{propertyType || 'Qualquer'}</div>
+              <div><strong className="text-brand-primary uppercase tracking-wider text-[10px] block">Finalidade</strong>{category === 'arrendamento' ? 'Arrendamento' : 'Compra'}</div>
+              <div><strong className="text-brand-primary uppercase tracking-wider text-[10px] block">Zona</strong>{location}</div>
+              <div><strong className="text-brand-primary uppercase tracking-wider text-[10px] block">Nº de Quartos</strong>{bedrooms}</div>
+              <div className="sm:col-span-2"><strong className="text-brand-primary uppercase tracking-wider text-[10px] block">Orçamento Máximo</strong>{Number(maxPrice).toLocaleString('pt-PT')} €</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="bg-brand-primary text-white px-8 py-4 text-xs font-bold uppercase tracking-widest hover:bg-brand-secondary transition-colors"
+            >
+              Registar Outro Interesse
+            </button>
+          </motion.div>
+        ) : (
+          <div className="bg-white text-brand-primary p-6 sm:p-10 shadow-2xl">
+            {/* Step Progress */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-3">
+                <span>Passo {step} de {totalSteps}</span>
+                <span>{Math.round((step / totalSteps) * 100)}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-gray-100 overflow-hidden">
+                <div
+                  className="h-full bg-brand-secondary transition-all duration-300"
+                  style={{ width: `${(step / totalSteps) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {errorMsg && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+                {errorMsg}
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {step === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary block mb-1">Pergunta 1</span>
+                    <h3 className="text-2xl font-serif font-bold text-brand-primary">Que tipo de imóvel procura?</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {propertyTypeOptions.map(option => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setPropertyType(option);
+                          setErrorMsg('');
+                        }}
+                        className={`p-4 border text-left transition-all ${
+                          propertyType === option
+                            ? 'border-brand-secondary bg-brand-primary text-white shadow-md'
+                            : 'border-gray-200 bg-gray-50 hover:border-brand-primary text-brand-primary'
+                        }`}
+                      >
+                        <span className="font-bold text-sm block">{option}</span>
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPropertyType('Qualquer');
+                        setErrorMsg('');
+                      }}
+                      className={`p-4 border text-left transition-all ${
+                        propertyType === 'Qualquer'
+                          ? 'border-brand-secondary bg-brand-primary text-white shadow-md'
+                          : 'border-gray-200 bg-gray-50 hover:border-brand-primary text-brand-primary'
+                      }`}
+                    >
+                      <span className="font-bold text-sm block">Outro / Qualquer</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary block mb-1">Pergunta 2</span>
+                    <h3 className="text-2xl font-serif font-bold text-brand-primary">Para compra ou arrendamento?</h3>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategory('venda');
+                        setErrorMsg('');
+                      }}
+                      className={`p-6 border text-left transition-all ${
+                        category === 'venda'
+                          ? 'border-brand-secondary bg-brand-primary text-white shadow-md'
+                          : 'border-gray-200 bg-gray-50 hover:border-brand-primary text-brand-primary'
+                      }`}
+                    >
+                      <span className="font-serif font-bold text-xl block mb-1">Compra</span>
+                      <span className={`text-xs ${category === 'venda' ? 'text-white/75' : 'text-gray-500'}`}>
+                        Aquisição de imóvel para habitação ou investimento
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategory('arrendamento');
+                        setErrorMsg('');
+                      }}
+                      className={`p-6 border text-left transition-all ${
+                        category === 'arrendamento'
+                          ? 'border-brand-secondary bg-brand-primary text-white shadow-md'
+                          : 'border-gray-200 bg-gray-50 hover:border-brand-primary text-brand-primary'
+                      }`}
+                    >
+                      <span className="font-serif font-bold text-xl block mb-1">Arrendamento</span>
+                      <span className={`text-xs ${category === 'arrendamento' ? 'text-white/75' : 'text-gray-500'}`}>
+                        Arrendamento residencial ou comercial
+                      </span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary block mb-1">Pergunta 3</span>
+                    <h3 className="text-2xl font-serif font-bold text-brand-primary">Em que zona?</h3>
+                  </div>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary" size={18} />
+                    <input
+                      type="text"
+                      value={location}
+                      onChange={e => {
+                        setLocation(e.target.value);
+                        setErrorMsg('');
+                      }}
+                      placeholder="Ex: Vilamoura, Loulé, Quinta do Lago, Faro..."
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400 block mb-2.5">Sugestões de Zonas</span>
+                    <div className="flex flex-wrap gap-2">
+                      {popularZones.map(zone => (
+                        <button
+                          key={zone}
+                          type="button"
+                          onClick={() => {
+                            setLocation(zone);
+                            setErrorMsg('');
+                          }}
+                          className={`px-3 py-1.5 text-xs font-bold border transition-colors ${
+                            location === zone
+                              ? 'bg-brand-primary text-white border-brand-primary'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-brand-primary'
+                          }`}
+                        >
+                          {zone}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 4 && (
+                <motion.div
+                  key="step4"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary block mb-1">Pergunta 4</span>
+                    <h3 className="text-2xl font-serif font-bold text-brand-primary">Qual o nº de quartos?</h3>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                    {['0', '1', '2', '3', '4', '5'].map(num => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => {
+                          setBedrooms(num);
+                          setErrorMsg('');
+                        }}
+                        className={`p-4 border text-center transition-all ${
+                          bedrooms === num
+                            ? 'border-brand-secondary bg-brand-primary text-white shadow-md'
+                            : 'border-gray-200 bg-gray-50 hover:border-brand-primary text-brand-primary'
+                        }`}
+                      >
+                        <span className="font-bold text-lg block">{num === '5' ? '5+' : num}</span>
+                        <span className="text-[10px] uppercase tracking-wider opacity-75">
+                          {num === '0' ? 'T0 / N/A' : `T${num}`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase tracking-widest font-bold text-gray-400 block mb-2">Ou indique outro número:</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={bedrooms}
+                      onChange={e => {
+                        setBedrooms(e.target.value);
+                        setErrorMsg('');
+                      }}
+                      placeholder="Ex: 3"
+                      className="w-full p-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                    />
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 5 && (
+                <motion.div
+                  key="step5"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary block mb-1">Pergunta 5</span>
+                    <h3 className="text-2xl font-serif font-bold text-brand-primary">Qual o seu orçamento máximo?</h3>
+                  </div>
+                  <div className="relative">
+                    <Euro className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-secondary" size={18} />
+                    <input
+                      type="number"
+                      min="1"
+                      value={maxPrice}
+                      onChange={e => {
+                        setMaxPrice(e.target.value);
+                        setErrorMsg('');
+                      }}
+                      placeholder={category === 'arrendamento' ? 'Ex: 2500 (€/mês)' : 'Ex: 550000 (€)'}
+                      className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400 block mb-2.5">Valores Sugeridos</span>
+                    <div className="flex flex-wrap gap-2">
+                      {budgetPresets.map(val => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => {
+                            setMaxPrice(String(val));
+                            setErrorMsg('');
+                          }}
+                          className={`px-3.5 py-2 text-xs font-bold border transition-colors ${
+                            Number(maxPrice) === val
+                              ? 'bg-brand-primary text-white border-brand-primary'
+                              : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-brand-primary'
+                          }`}
+                        >
+                          {val.toLocaleString('pt-PT')} €{category === 'arrendamento' ? '/mês' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {step === 6 && (
+                <motion.form
+                  key="step6"
+                  onSubmit={handleSubmit}
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-6"
+                >
+                  <div>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-brand-secondary block mb-1">Último Passo</span>
+                    <h3 className="text-2xl font-serif font-bold text-brand-primary">Os seus dados de contacto</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Para que a nossa equipa o possa contactar assim que surgir uma correspondência.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1.5 block">Nome</label>
+                      <input
+                        type="text"
+                        required
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder="O seu nome"
+                        className="w-full p-3.5 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1.5 block">Email</label>
+                      <input
+                        type="email"
+                        required
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        className="w-full p-3.5 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-gray-500 mb-1.5 block">Telemóvel</label>
+                      <input
+                        type="tel"
+                        required
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        placeholder="+351 9xx xxx xxx"
+                        className="w-full p-3.5 bg-gray-50 border border-gray-200 outline-none focus:border-brand-primary text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 border border-gray-200 p-4 text-xs text-gray-600 flex flex-wrap gap-x-6 gap-y-2">
+                    <span><strong>Tipo:</strong> {propertyType || 'Qualquer'}</span>
+                    <span><strong>Finalidade:</strong> {category === 'arrendamento' ? 'Arrendamento' : 'Compra'}</span>
+                    <span><strong>Zona:</strong> {location}</span>
+                    <span><strong>Quartos:</strong> {bedrooms}</span>
+                    <span><strong>Orçamento:</strong> {Number(maxPrice).toLocaleString('pt-PT')} €</span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="px-6 py-3.5 border border-gray-200 text-xs font-bold uppercase tracking-widest text-gray-600 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-brand-secondary text-white px-8 py-4 text-xs font-bold uppercase tracking-widest hover:bg-brand-secondary/90 transition-all shadow-lg disabled:opacity-50 flex items-center gap-2"
+                    >
+                      {isSubmitting ? 'A Registar...' : 'Registar Interesse'} <ArrowRight size={16} />
+                    </button>
+                  </div>
+                </motion.form>
+              )}
+            </AnimatePresence>
+
+            {step < 6 && (
+              <div className="flex items-center justify-between pt-8 mt-8 border-t border-gray-100">
+                {step > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    className="px-6 py-3.5 border border-gray-200 text-xs font-bold uppercase tracking-widest text-gray-600 hover:border-brand-primary hover:text-brand-primary transition-colors"
+                  >
+                    Anterior
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="bg-brand-primary text-white px-8 py-3.5 text-xs font-bold uppercase tracking-widest hover:bg-brand-secondary transition-colors flex items-center gap-2 shadow-md"
+                >
+                  Seguinte <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
   );
 };
 
@@ -1703,8 +2372,8 @@ const ContactView = ({ properties, config }: { properties: Property[], config?: 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Fale Connosco</span>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8">{title}</h1>
-          <p className="text-brand-muted text-lg leading-relaxed">{subtitle}</p>
+          <h1 className={`text-4xl md:text-6xl font-bold text-brand-primary mb-8 ${config?.contactTitleFont || 'font-serif'}`}>{title}</h1>
+          <p className={`text-brand-muted text-lg leading-relaxed ${config?.contactSubtitleFont || ''}`}>{subtitle}</p>
         </div>
 
         <div className="flex flex-col items-center gap-16">
@@ -1718,7 +2387,7 @@ const ContactView = ({ properties, config }: { properties: Property[], config?: 
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">O Nosso Escritório</div>
-                    <div className="text-brand-muted text-sm px-4">{address}</div>
+                    <div className={`text-brand-muted text-sm px-4 ${config?.contactAddressFont || ''}`}>{address}</div>
                   </div>
                 </div>
                 
@@ -1728,7 +2397,7 @@ const ContactView = ({ properties, config }: { properties: Property[], config?: 
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">Telefone</div>
-                    <div className="text-brand-muted text-sm">{phone}</div>
+                    <div className={`text-brand-muted text-sm ${config?.contactPhoneFont || ''}`}>{phone}</div>
                     <div className="text-brand-muted/60 text-xs mt-2">Segunda a Sexta, 09h - 18h</div>
                   </div>
                 </div>
@@ -1739,7 +2408,7 @@ const ContactView = ({ properties, config }: { properties: Property[], config?: 
                   </div>
                   <div>
                     <div className="font-bold text-brand-primary mb-2">Email</div>
-                    <div className="text-brand-muted text-sm">{email}</div>
+                    <div className={`text-brand-muted text-sm ${config?.contactEmailFont || ''}`}>{email}</div>
                   </div>
                 </div>
               </div>
@@ -1750,15 +2419,15 @@ const ContactView = ({ properties, config }: { properties: Property[], config?: 
               <div className="bg-brand-primary p-8 text-white rounded-none">
                 <div className="flex justify-between py-3 border-b border-white/10">
                   <span>Segunda — Sexta</span>
-                  <span className="font-bold">{scheduleWeek}</span>
+                  <span className={`font-bold ${config?.contactScheduleWeekFont || ''}`}>{scheduleWeek}</span>
                 </div>
                 <div className="flex justify-between py-3 border-b border-white/10">
                   <span>Sábado</span>
-                  <span className="font-bold">{scheduleSat}</span>
+                  <span className={`font-bold ${config?.contactScheduleSatFont || ''}`}>{scheduleSat}</span>
                 </div>
                 <div className="flex justify-between py-3">
                   <span>Domingo</span>
-                  <span className="text-white/40 italic">{scheduleSun}</span>
+                  <span className={`text-white/40 italic ${config?.contactScheduleSunFont || ''}`}>{scheduleSun}</span>
                 </div>
               </div>
             </div>
@@ -1871,8 +2540,8 @@ const ServicesView = ({ onViewChange, config }: { onViewChange: (v: View) => voi
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
           <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Nossa Especialidade</span>
-          <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-4">{title}</h1>
-          <p className="text-brand-muted text-lg leading-relaxed px-4">{subtitle}</p>
+          <h1 className={`text-4xl md:text-6xl font-bold text-brand-primary mb-8 px-4 ${config?.servicesTitleFont || 'font-serif'}`}>{title}</h1>
+          <p className={`text-brand-muted text-lg leading-relaxed px-4 ${config?.servicesSubtitleFont || ''}`}>{subtitle}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-24">
@@ -1958,11 +2627,11 @@ const AboutView = ({ onViewChange, config }: { onViewChange: (v: View) => void, 
               transition={{ duration: 1 }}
             >
               <span className="text-brand-secondary font-bold uppercase tracking-widest text-xs mb-4 block">Nossa História</span>
-              <h1 className="text-4xl md:text-6xl font-serif font-bold text-brand-primary mb-8 px-0">{title}</h1>
-              <p className="text-gray-600 text-lg leading-relaxed mb-8">
+              <h1 className={`text-4xl md:text-6xl font-bold text-brand-primary mb-8 px-0 ${config?.aboutTitleFont || 'font-serif'}`}>{title}</h1>
+              <p className={`text-gray-600 text-lg leading-relaxed mb-8 ${config?.aboutText1Font || ''}`}>
                 {text1}
               </p>
-              <p className="text-gray-600 text-lg leading-relaxed mb-10">
+              <p className={`text-gray-600 text-lg leading-relaxed mb-10 ${config?.aboutText2Font || ''}`}>
                 {text2}
               </p>
               <div className="flex flex-wrap gap-8">
@@ -2005,7 +2674,7 @@ const AboutView = ({ onViewChange, config }: { onViewChange: (v: View) => void, 
                 transition={{ duration: 0.6, delay: 0.8 }}
                 className="absolute -bottom-10 -right-10 bg-brand-secondary p-10 rounded-none text-white shadow-2xl md:block hidden"
               >
-                <span className="text-5xl font-serif font-bold block mb-2">{years}</span>
+                <span className={`text-5xl font-bold block mb-2 ${config?.aboutYearsCountFont || 'font-serif'}`}>{years}</span>
                 <span className="text-xs uppercase tracking-[0.2em] font-bold">Anos de Excelência</span>
               </motion.div>
             </motion.div>
